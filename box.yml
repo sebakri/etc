@@ -3,9 +3,6 @@ tools:
       type: go
       source: golang.org/x/tools/gopls
       version: latest
-    - name: cowsay
-      type: npm
-      source: cowsay
     - name: jj
       type: cargo
       source: jj-cli
@@ -36,6 +33,3 @@ tools:
     - name: golangci-lint-script
       type: script
       source: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $BOX_BIN_DIR v1.60.1
-    - name: htop
-      type: script
-      source: echo htop

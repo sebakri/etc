@@ -5,13 +5,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 
 	"box/internal/config"
+	"gopkg.in/yaml.v3"
 )
 
 type Manager struct {
 	RootDir string
 	Env     map[string]string
+}
+
+type ToolManifest struct {
+	Files []string `yaml:"files"`
+}
+
+type Manifest struct {
+	Tools map[string]ToolManifest `yaml:"tools"`
 }
 
 func New(rootDir string, env map[string]string) *Manager {
@@ -30,49 +40,156 @@ func (m *Manager) Install(tool config.Tool) error {
 		return fmt.Errorf("failed to create bin dir: %w", err)
 	}
 
+	// Capture state before install
+	before, err := m.captureState()
+	if err != nil {
+		return fmt.Errorf("failed to capture state before install: %w", err)
+	}
+
+	var installErr error
 	switch tool.Type {
 	case "go":
-		return m.installGo(tool, binDir)
+		installErr = m.installGo(tool, binDir)
 	case "npm":
-		return m.installNpm(tool, boxDir)
+		installErr = m.installNpm(tool, boxDir)
 	case "cargo":
-		return m.installCargo(tool, boxDir)
+		installErr = m.installCargo(tool, boxDir)
 	case "uv":
-		return m.installUv(tool, binDir)
+		installErr = m.installUv(tool, binDir)
 	case "gem":
-		return m.installGem(tool, binDir)
+		installErr = m.installGem(tool, binDir)
 	case "script":
-		return m.installScript(tool)
+		installErr = m.installScript(tool)
 	default:
 		return fmt.Errorf("unsupported tool type: %s", tool.Type)
 	}
+
+	if installErr != nil {
+		return installErr
+	}
+
+	// Capture state after install and find new files
+	after, err := m.captureState()
+	if err != nil {
+		return fmt.Errorf("failed to capture state after install: %w", err)
+	}
+
+	newFiles := []string{}
+	for path := range after {
+		if _, ok := before[path]; !ok {
+			newFiles = append(newFiles, path)
+		}
+	}
+	sort.Strings(newFiles)
+
+	return m.updateManifest(tool.Name, newFiles)
+}
+
+func (m *Manager) captureState() (map[string]bool, error) {
+	state := make(map[string]bool)
+	boxDir := filepath.Join(m.RootDir, ".box")
+
+	if _, err := os.Stat(boxDir); os.IsNotExist(err) {
+		return state, nil
+	}
+
+	err := filepath.Walk(boxDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// We track the relative path from BoxDir
+		rel, err := filepath.Rel(m.RootDir, path)
+		if err != nil {
+			return err
+		}
+		state[rel] = true
+		return nil
+	})
+
+	return state, err
+}
+
+func (m *Manager) updateManifest(name string, files []string) error {
+	manifestPath := filepath.Join(m.RootDir, ".box", "installed.yml")
+	manifest := Manifest{Tools: make(map[string]ToolManifest)}
+
+	if data, err := os.ReadFile(manifestPath); err == nil {
+		yaml.Unmarshal(data, &manifest)
+	}
+
+	manifest.Tools[name] = ToolManifest{Files: files}
+
+	data, err := yaml.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(manifestPath, data, 0644)
 }
 
 func (m *Manager) Uninstall(name string) error {
+	manifestPath := filepath.Join(m.RootDir, ".box", "installed.yml")
+	manifest := Manifest{Tools: make(map[string]ToolManifest)}
+
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // Nothing to uninstall from manifest
+		}
+		return err
+	}
+	yaml.Unmarshal(data, &manifest)
+
+	toolInfo, ok := manifest.Tools[name]
+	if !ok {
+		// Fallback to best effort if not in manifest (old tools)
+		return m.uninstallBestEffort(name)
+	}
+
+	// Remove files in reverse order (to remove files before their parent directories)
+	sort.Sort(sort.Reverse(sort.StringSlice(toolInfo.Files)))
+
+	for _, file := range toolInfo.Files {
+		fullPath := filepath.Join(m.RootDir, file)
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			continue
+		}
+
+		if info.IsDir() {
+			// Only remove if empty
+			entries, _ := os.ReadDir(fullPath)
+			if len(entries) == 0 {
+				fmt.Printf("Removing empty directory %s...\n", file)
+				os.Remove(fullPath)
+			}
+		} else {
+			fmt.Printf("Removing file %s...\n", file)
+			os.Remove(fullPath)
+		}
+	}
+
+	delete(manifest.Tools, name)
+	newData, _ := yaml.Marshal(manifest)
+	return os.WriteFile(manifestPath, newData, 0644)
+}
+
+func (m *Manager) uninstallBestEffort(name string) error {
 	boxDir := filepath.Join(m.RootDir, ".box")
 	binDir := filepath.Join(boxDir, "bin")
 
-	// 1. Remove binary from .box/bin (best effort search)
-	// For uv tools, it's often a symlink or binary with the tool name
 	binaryPath := filepath.Join(binDir, name)
 	if _, err := os.Stat(binaryPath); err == nil {
 		fmt.Printf("Removing binary %s...\n", binaryPath)
 		os.Remove(binaryPath)
 	}
 
-	// 2. Remove tool-specific data directories
-	// UV: .box/uv/<name>
 	uvToolDir := filepath.Join(boxDir, "uv", name)
 	if _, err := os.Stat(uvToolDir); err == nil {
 		fmt.Printf("Removing data directory %s...\n", uvToolDir)
 		os.RemoveAll(uvToolDir)
 	}
 
-	// Cargo: .box/bin/<name> (already covered)
-	
-	// Gems: .box/gems/bin/<name> (if bindir was there) or gems data
-	// Currently we just try to remove the binary from binDir.
-	
 	return nil
 }
 
