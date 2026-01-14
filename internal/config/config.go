@@ -14,7 +14,8 @@ type Tool struct {
 }
 
 type Config struct {
-	Tools []Tool `yaml:"tools"`
+	Tools []Tool            `yaml:"tools"`
+	Env   map[string]string `yaml:"env,omitempty"`
 }
 
 func Load(path string) (*Config, error) {

@@ -49,6 +49,14 @@ func runExecute() {
 		log.Fatalf("Failed to get current working directory: %v", err)
 	}
 
+	configFile := "etc.yml"
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		// If etc.yml is missing, we can still run if the binary exists, 
+		// but we won't have custom env vars.
+		cfg = &config.Config{}
+	}
+
 	binDir := filepath.Join(cwd, ".etc", "bin")
 	binaryPath := filepath.Join(binDir, commandName)
 
@@ -61,7 +69,7 @@ func runExecute() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// Ensure .etc/bin is in the PATH for the executed command
+	// Ensure .etc/bin is in the PATH for the executed command and add custom env vars
 	env := os.Environ()
 	pathFound := false
 	for i, e := range env {
@@ -73,6 +81,10 @@ func runExecute() {
 	}
 	if !pathFound {
 		env = append(env, "PATH="+binDir)
+	}
+
+	for k, v := range cfg.Env {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	cmd.Env = env
 
@@ -100,7 +112,7 @@ func runInstall() {
 		log.Fatalf("Failed to get current working directory: %v", err)
 	}
 
-	mgr := installer.New(cwd)
+	mgr := installer.New(cwd, cfg.Env)
 
 	fmt.Println("Starting tool installation...")
 	for _, tool := range cfg.Tools {

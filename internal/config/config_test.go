@@ -15,6 +15,8 @@ tools:
   - name: ruff
     type: uv
     source: ruff
+env:
+  KEY: value
 `)
 	tmpfile, err := os.CreateTemp("", "etc-test-*.yml")
 	if err != nil {
@@ -37,6 +39,10 @@ tools:
 
 	if len(cfg.Tools) != 2 {
 		t.Errorf("Expected 2 tools, got %d", len(cfg.Tools))
+	}
+
+	if cfg.Env["KEY"] != "value" {
+		t.Errorf("Expected Env['KEY'] to be 'value', got '%s'", cfg.Env["KEY"])
 	}
 
 	if cfg.Tools[0].Name != "test-tool" {

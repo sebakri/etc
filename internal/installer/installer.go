@@ -11,10 +11,14 @@ import (
 
 type Manager struct {
 	RootDir string
+	Env     map[string]string
 }
 
-func New(rootDir string) *Manager {
-	return &Manager{RootDir: rootDir}
+func New(rootDir string, env map[string]string) *Manager {
+	return &Manager{
+		RootDir: rootDir,
+		Env:     env,
+	}
 }
 
 func (m *Manager) Install(tool config.Tool) error {
@@ -59,11 +63,11 @@ func (m *Manager) EnsureEnvrc() error {
 	envrcPath := filepath.Join(m.RootDir, ".envrc")
 	content := "PATH_add .etc/bin\n"
 
-	if _, err := os.Stat(envrcPath); err == nil {
-		return nil
+	for k, v := range m.Env {
+		content += fmt.Sprintf("export %s=\"%s\"\n", k, v)
 	}
 
-	fmt.Println("Creating .envrc...")
+	fmt.Println("Updating .envrc...")
 	return os.WriteFile(envrcPath, []byte(content), 0644)
 }
 
