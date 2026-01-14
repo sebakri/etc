@@ -7,7 +7,7 @@ Box is a minimalist, project-local toolbox that keeps your development tools, bi
 - **Project-Local Tools**: Tools are installed in `.box/bin`, isolated from your system.
 - **Environment Variables**: Define project-specific variables that are automatically exported.
 - **Declarative Setup**: Define all required tools and env vars in a simple `box.yml` file.
-- **Multi-Runtime Support**: Works seamlessly with Go, npm, Cargo, and uv.
+- **Multi-Runtime Support**: Works seamlessly with Go, npm, Cargo, uv, and gem.
 - **direnv Integration**: Automatically manages your `PATH` and `ENV` using `.envrc`.
 - **Cross-Platform**: Built in Go, supporting Linux, macOS, and Windows.
 
@@ -35,6 +35,9 @@ tools:
     args:
       - --strategies
       - crate-meta-data
+  - name: colorize
+    type: gem
+    source: colorize
 env:
   DEBUG: "true"
   API_URL: "http://localhost:8080"

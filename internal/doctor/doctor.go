@@ -8,7 +8,7 @@ import (
 func Run() {
 	fmt.Println("Checking box host environment tools...")
 
-	tools := []string{"go", "npm", "cargo", "cargo-binstall", "uv", "direnv"}
+	tools := []string{"go", "npm", "cargo", "cargo-binstall", "uv", "gem", "direnv"}
 	allFound := true
 
 	for _, tool := range tools {

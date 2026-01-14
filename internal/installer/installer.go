@@ -39,6 +39,8 @@ func (m *Manager) Install(tool config.Tool) error {
 		return m.installCargo(tool, boxDir)
 	case "uv":
 		return m.installUv(tool, binDir)
+	case "gem":
+		return m.installGem(tool, binDir)
 	default:
 		return fmt.Errorf("unsupported tool type: %s", tool.Type)
 	}
@@ -128,6 +130,25 @@ func (m *Manager) installUv(tool config.Tool, binDir string) error {
 	env = append(env, fmt.Sprintf("UV_TOOL_BIN_DIR=%s", binDir))
 	env = append(env, fmt.Sprintf("UV_TOOL_DIR=%s", uvDir))
 	cmd.Env = env
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+func (m *Manager) installGem(tool config.Tool, binDir string) error {
+	fmt.Printf("Installing %s (gem)...\n", tool.Name)
+
+	boxDir := filepath.Join(m.RootDir, ".box")
+	gemDir := filepath.Join(boxDir, "gems")
+
+	// gem install --install-dir .box/gems --bindir .box/bin <gem>
+	args := []string{"install", "--install-dir", gemDir, "--bindir", binDir, "--no-document"}
+	args = append(args, tool.Args...)
+	args = append(args, tool.Source)
+
+	cmd := exec.Command("gem", args...)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

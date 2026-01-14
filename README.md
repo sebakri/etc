@@ -34,7 +34,7 @@ Full documentation is available at [https://sebakri.github.io/etc/](https://seba
 
 - **Project-Local Tools**: Installs tools into a local `.box/bin` directory.
 - **Environment Variables**: Define project-specific environment variables in `box.yml`.
-- **No Root Required**: Leverages user-space package managers (Go, npm, Cargo, uv).
+- **No Root Required**: Leverages user-space package managers (Go, npm, Cargo, uv, gem).
 - **Declarative Configuration**: Defined in `box.yml`.
 - **Manual or Automatic PATH**: Use `box run` or generate a `.envrc` for `direnv`.
 
