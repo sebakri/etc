@@ -135,7 +135,7 @@ func runInstall() {
 }
 
 func usage() {
-	fmt.Println("box - Project Tool Configuration")
+	fmt.Println("box - Minimalist project-local toolbox")
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  box <command>")

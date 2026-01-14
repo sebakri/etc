@@ -1,6 +1,6 @@
-# Box - Project Tool Configuration
+# Box - Minimalist project-local toolbox
 
-Box is a lightweight, platform-independent tools manager for your projects. It allows you to define and install project-specific tools locally without requiring root permissions, keeping your global environment clean and your development setup reproducible.
+Box is a minimalist, project-local toolbox that keeps your development tools, binaries, and environment variables neatly packed and isolated within your project. It allows you to define and install project-specific tools locally without requiring root permissions, keeping your global environment clean and your development setup reproducible.
 
 ## Key Features
 
