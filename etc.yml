@@ -14,3 +14,9 @@ tools:
   - name: task
     type: go
     source: github.com/go-task/task/v3/cmd/task@latest
+  - name: mkdocs
+    type: uv
+    source: mkdocs
+    args:
+      - --with
+      - mkdocs-simple-blog

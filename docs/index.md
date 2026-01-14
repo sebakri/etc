@@ -14,7 +14,7 @@ ETC is a lightweight, platform-independent tools manager for your projects. It a
 
 ### 1. Installation
 
-Download the latest binary for your platform from the [Releases](https://github.com/youruser/etc/releases) page and place it in your system PATH.
+Download the latest binary for your platform from the [Releases](https://github.com/sebakri/etc/releases) page and place it in your system PATH.
 
 ### 2. Configure Your Project
 
@@ -61,4 +61,4 @@ task --version
 
 ## Contributing
 
-We welcome contributions! Please check the [repository](https://github.com/youruser/etc) for issues and pull requests.
+We welcome contributions! Please check the [repository](https://github.com/sebakri/etc) for issues and pull requests.

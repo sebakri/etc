@@ -15,3 +15,8 @@ tasks:
     desc: Tidy go modules
     cmds:
       - go mod tidy
+
+  serve-docs:
+    desc: Serve documentation
+    cmds:
+      - ./etc run mkdocs serve

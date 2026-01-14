@@ -1,13 +1,13 @@
 # ETC - Ephemeral Tool Configuration
 
-[![Deploy Documentation](https://github.com/youruser/etc/actions/workflows/docs.yml/badge.svg)](https://youruser.github.io/etc/)
-[![Release](https://github.com/youruser/etc/actions/workflows/release.yml/badge.svg)](https://github.com/youruser/etc/releases)
+[![Deploy Documentation](https://github.com/sebakri/etc/actions/workflows/docs.yml/badge.svg)](https://sebakri.github.io/etc/)
+[![Release](https://github.com/sebakri/etc/actions/workflows/release.yml/badge.svg)](https://github.com/sebakri/etc/releases)
 
 ETC is a platform-independent tools manager written in Go. It allows project-specific tool installation without root permissions, keeping your system clean and your project reproducible.
 
 ## Documentation
 
-Full documentation is available at [https://youruser.github.io/etc/](https://youruser.github.io/etc/)
+Full documentation is available at [https://sebakri.github.io/etc/](https://sebakri.github.io/etc/)
 
 ## Quick Start
 
@@ -24,7 +24,7 @@ Full documentation is available at [https://youruser.github.io/etc/](https://you
 
 ## Installation
 
-Download the binary for your platform from the [latest releases](https://github.com/youruser/etc/releases).
+Download the binary for your platform from the [latest releases](https://github.com/sebakri/etc/releases).
 
 ## Development
 

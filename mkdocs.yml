@@ -1,0 +1,6 @@
+site_name: etc documentation
+theme:
+  name: simple-blog
+
+nav:
+  - Home: index.md

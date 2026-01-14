@@ -8,7 +8,7 @@ import (
 func Run() {
 	fmt.Println("Checking host environment tools...")
 
-	tools := []string{"go", "npm", "cargo", "cargo-binstall", "direnv"}
+	tools := []string{"go", "npm", "cargo", "cargo-binstall", "uv", "direnv"}
 	allFound := true
 
 	for _, tool := range tools {

@@ -12,6 +12,9 @@ tools:
   - name: test-tool
     type: go
     source: example.com/tool
+  - name: ruff
+    type: uv
+    source: ruff
 `)
 	tmpfile, err := os.CreateTemp("", "etc-test-*.yml")
 	if err != nil {
@@ -32,8 +35,8 @@ tools:
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	if len(cfg.Tools) != 1 {
-		t.Errorf("Expected 1 tool, got %d", len(cfg.Tools))
+	if len(cfg.Tools) != 2 {
+		t.Errorf("Expected 2 tools, got %d", len(cfg.Tools))
 	}
 
 	if cfg.Tools[0].Name != "test-tool" {

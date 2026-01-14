@@ -33,6 +33,8 @@ func (m *Manager) Install(tool config.Tool) error {
 		return m.installNpm(tool, etcDir)
 	case "cargo":
 		return m.installCargo(tool, etcDir)
+	case "uv":
+		return m.installUv(tool, binDir)
 	default:
 		return fmt.Errorf("unsupported tool type: %s", tool.Type)
 	}
@@ -97,6 +99,31 @@ func (m *Manager) installCargo(tool config.Tool, etcDir string) error {
 	args = append(args, tool.Source)
 
 	cmd := exec.Command("cargo", args...)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+func (m *Manager) installUv(tool config.Tool, binDir string) error {
+	fmt.Printf("Installing %s (uv)...\n", tool.Name)
+
+	etcDir := filepath.Join(m.RootDir, ".etc")
+	uvDir := filepath.Join(etcDir, "uv")
+
+	// uv tool install --force <package>
+	// UV_TOOL_BIN_DIR and UV_TOOL_DIR ensure project-local installation
+	args := []string{"tool", "install", "--force"}
+	args = append(args, tool.Args...)
+	args = append(args, tool.Source)
+
+	cmd := exec.Command("uv", args...)
+
+	env := os.Environ()
+	env = append(env, fmt.Sprintf("UV_TOOL_BIN_DIR=%s", binDir))
+	env = append(env, fmt.Sprintf("UV_TOOL_DIR=%s", uvDir))
+	cmd.Env = env
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
