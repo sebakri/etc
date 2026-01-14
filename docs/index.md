@@ -48,7 +48,15 @@ Run the install command to fetch and install all defined tools:
 box install
 ```
 
-### 4. Use Your Tools
+### 4. Setup Shell Integration (Optional)
+
+If you use `direnv`, generate the `.envrc` file:
+
+```bash
+box generate direnv
+```
+
+### 5. Use Your Tools
 
 You can run tools directly using the `run` command:
 
@@ -56,7 +64,7 @@ You can run tools directly using the `run` command:
 box run task --version
 ```
 
-Or, if you use `direnv`, simply `allow` the `.envrc` and use them directly:
+Or, if you use `direnv`, simply use them directly:
 
 ```bash
 task --version
@@ -64,9 +72,10 @@ task --version
 
 ## Commands
 
-- `box install`: Installs tools defined in `box.yml` and sets up `.envrc`.
+- `box install`: Installs tools defined in `box.yml`.
 - `box run <command>`: Executes a binary from the local `.box/bin` directory.
 - `box env`: Displays the merged list of environment variables.
+- `box generate direnv`: Generates a `.envrc` file for `direnv` integration.
 - `box doctor`: Checks if the required host runtimes (Go, npm, Cargo, uv) are installed.
 - `box help`: Displays usage information.
 

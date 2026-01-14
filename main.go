@@ -27,6 +27,8 @@ func main() {
 		runExecute()
 	case "env":
 		runEnv()
+	case "generate":
+		runGenerate()
 	case "doctor":
 		doctor.Run()
 	case "help":
@@ -147,6 +149,41 @@ func runEnv() {
 	}
 }
 
+func runGenerate() {
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: box generate <type>")
+		fmt.Println("Available types: direnv")
+		os.Exit(1)
+	}
+
+	genType := os.Args[2]
+	if genType != "direnv" {
+		fmt.Printf("Unknown generation type: %s\n", genType)
+		os.Exit(1)
+	}
+
+	configFile := "box.yml"
+	cfg, err := config.Load(configFile)
+	if err != nil {
+		cfg = &config.Config{}
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get current working directory: %v", err)
+	}
+
+	mgr := installer.New(cwd, cfg.Env)
+	if err := mgr.EnsureEnvrc(); err != nil {
+		log.Fatalf("Failed to generate .envrc: %v", err)
+	}
+
+	fmt.Println("✅ Generated .envrc")
+	if err := mgr.AllowDirenv(); err != nil {
+		fmt.Printf("⚠️  Failed to run direnv allow: %v\n", err)
+	}
+}
+
 func runInstall() {
 	configFile := "box.yml"
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
@@ -174,14 +211,6 @@ func runInstall() {
 		fmt.Printf("✅ Successfully installed %s\n", tool.Name)
 	}
 
-	if err := mgr.EnsureEnvrc(); err != nil {
-		log.Printf("⚠️  Failed to create .envrc: %v", err)
-	} else {
-		if err := mgr.AllowDirenv(); err != nil {
-			log.Printf("⚠️  Failed to run direnv allow (is direnv installed?): %v", err)
-		}
-	}
-
 	fmt.Println("All tools installed successfully.")
 }
 
@@ -195,6 +224,7 @@ func usage() {
 	fmt.Println("  install   Install tools defined in box.yml")
 	fmt.Println("  run       Execute a binary from .box/bin")
 	fmt.Println("  env       Display merged environment variables")
+	fmt.Println("  generate  Generate configuration files (e.g., direnv)")
 	fmt.Println("  doctor    Check if host tools (go, npm, cargo, uv) are installed")
 	fmt.Println("  help      Show this help message")
 }

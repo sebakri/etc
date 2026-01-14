@@ -27,7 +27,8 @@ Full documentation is available at [https://sebakri.github.io/etc/](https://seba
       APP_DEBUG: "true"
     ```
 2.  **Install**: Run `box install`.
-3.  **Run**: Run `box run <tool>` or use `direnv`.
+3.  **Setup Shell (Optional)**: Run `box generate direnv` if you use `direnv`.
+4.  **Run**: Run `box run <tool>` or use `direnv`.
 
 ## Features
 
@@ -35,11 +36,19 @@ Full documentation is available at [https://sebakri.github.io/etc/](https://seba
 - **Environment Variables**: Define project-specific environment variables in `box.yml`.
 - **No Root Required**: Leverages user-space package managers (Go, npm, Cargo, uv).
 - **Declarative Configuration**: Defined in `box.yml`.
-- **Automatic PATH & Env**: Integrated with `direnv` via `.envrc`.
+- **Manual or Automatic PATH**: Use `box run` or generate a `.envrc` for `direnv`.
 
 ## Installation
 
 Download the binary for your platform from the [latest releases](https://github.com/sebakri/etc/releases).
+
+## Commands
+
+- `box install`: Installs tools defined in `box.yml`.
+- `box run <command>`: Executes a binary from the local `.box/bin` directory.
+- `box env`: Displays the merged list of environment variables.
+- `box generate direnv`: Generates a `.envrc` file for `direnv` integration.
+- `box doctor`: Checks if the host runtimes are installed.
 
 ## Development
 
