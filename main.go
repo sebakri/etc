@@ -64,7 +64,8 @@ func runExecute() {
 		cfg = &config.Config{}
 	}
 
-	binDir := filepath.Join(cwd, ".box", "bin")
+	boxDir := filepath.Join(cwd, ".box")
+	binDir := filepath.Join(boxDir, "bin")
 	binaryPath := filepath.Join(binDir, commandName)
 
 	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
@@ -89,6 +90,8 @@ func runExecute() {
 	if !pathFound {
 		env = append(env, "PATH="+binDir)
 	}
+
+	env = append(env, fmt.Sprintf("BOX_DIR=%s", boxDir))
 
 	for k, v := range cfg.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
@@ -115,7 +118,8 @@ func runEnv() {
 		cfg = &config.Config{}
 	}
 
-	binDir := filepath.Join(cwd, ".box", "bin")
+	boxDir := filepath.Join(cwd, ".box")
+	binDir := filepath.Join(boxDir, "bin")
 
 	// Get current environment and merge with box.yml env and updated PATH
 	env := os.Environ()
@@ -141,8 +145,20 @@ func runEnv() {
 		}
 	}
 
+	envMap["BOX_DIR"] = boxDir
+
 	for k, v := range cfg.Env {
 		envMap[k] = v
+	}
+
+	// If a specific key is requested
+	if len(os.Args) > 2 {
+		key := os.Args[2]
+		if val, ok := envMap[key]; ok {
+			fmt.Print(val) // Print without newline for shell substitution $(bx env BOX_DIR)
+			return
+		}
+		os.Exit(1)
 	}
 
 	// Print in KEY=VALUE format

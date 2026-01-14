@@ -41,6 +41,8 @@ func (m *Manager) Install(tool config.Tool) error {
 		return m.installUv(tool, binDir)
 	case "gem":
 		return m.installGem(tool, binDir)
+	case "script":
+		return m.installScript(tool)
 	default:
 		return fmt.Errorf("unsupported tool type: %s", tool.Type)
 	}
@@ -67,7 +69,9 @@ func (m *Manager) installGo(tool config.Tool, binDir string) error {
 
 func (m *Manager) EnsureEnvrc() error {
 	envrcPath := filepath.Join(m.RootDir, ".envrc")
-	content := "PATH_add .box/bin\n"
+	boxDir := filepath.Join(m.RootDir, ".box")
+	content := fmt.Sprintf("export BOX_DIR=\"%s\"\n", boxDir)
+	content += "PATH_add .box/bin\n"
 
 	for k, v := range m.Env {
 		content += fmt.Sprintf("export %s=\"%s\"\n", k, v)
@@ -166,6 +170,31 @@ func (m *Manager) installGem(tool config.Tool, binDir string) error {
 	args = append(args, tool.Source)
 
 	cmd := exec.Command("gem", args...)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+func (m *Manager) installScript(tool config.Tool) error {
+	fmt.Printf("Installing via script: %s\n", tool.Source)
+
+	boxDir := filepath.Join(m.RootDir, ".box")
+	binDir := filepath.Join(boxDir, "bin")
+
+	cmd := exec.Command("sh", "-c", tool.Source)
+	cmd.Dir = m.RootDir
+
+	env := os.Environ()
+	env = append(env, fmt.Sprintf("BOX_DIR=%s", boxDir))
+	env = append(env, fmt.Sprintf("PATH=%s%s%s", binDir, string(os.PathListSeparator), os.Getenv("PATH")))
+	
+	// Add project custom env vars
+	for k, v := range m.Env {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+	cmd.Env = env
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -7,8 +7,8 @@ import (
 )
 
 type Tool struct {
-	Type    string   `yaml:"type"`              // "go", "npm", "cargo", "uv", "gem"
-	Source  string   `yaml:"source"`            // Package path (e.g., "golang.org/x/tools/gopls")
+	Type    string   `yaml:"type"`              // "go", "npm", "cargo", "uv", "gem", "script"
+	Source  string   `yaml:"source"`            // Package path or script command
 	Version string   `yaml:"version,omitempty"` // Optional version (e.g., "latest", "0.1.0")
 	Args    []string `yaml:"args,omitempty"`
 }
