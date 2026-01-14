@@ -1,29 +1,29 @@
 tools:
-    - type: go
-      source: golang.org/x/tools/gopls
-      version: latest
-    - type: npm
-      source: cowsay
-    - type: cargo
-      source: jj-cli
-      args:
-        - --strategies
-        - crate-meta-data
-    - type: go
-      source: github.com/go-task/task/v3/cmd/task
-      version: latest
-    - type: uv
-      source: mkdocs
-      args:
-        - --with
-        - mkdocs-simple-blog
-    - type: uv
-      source: rich-cli
-    - type: uv
-      source: black
-      version: 24.3.0
-    - type: go
-      source: github.com/golangci/golangci-lint/cmd/golangci-lint
-      version: latest
-    - type: script
-      source: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b .box/bin v1.60.1
+  - type: go
+    source: golang.org/x/tools/gopls
+    version: latest
+  - type: npm
+    source: cowsay
+  - type: cargo
+    source: jj-cli
+    args:
+      - --strategies
+      - crate-meta-data
+  - type: go
+    source: github.com/go-task/task/v3/cmd/task
+    version: latest
+  - type: uv
+    source: mkdocs
+    args:
+      - --with
+      - mkdocs-simple-blog
+  - type: uv
+    source: rich-cli
+  - type: uv
+    source: black
+    version: 24.3.0
+  - type: go
+    source: github.com/golangci/golangci-lint/cmd/golangci-lint
+    version: latest
+  - type: script
+    source: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $BOX_BIN_DIR v1.60.1

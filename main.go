@@ -92,6 +92,7 @@ func runExecute() {
 	}
 
 	env = append(env, fmt.Sprintf("BOX_DIR=%s", boxDir))
+	env = append(env, fmt.Sprintf("BOX_BIN_DIR=%s", binDir))
 
 	for k, v := range cfg.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
@@ -146,6 +147,7 @@ func runEnv() {
 	}
 
 	envMap["BOX_DIR"] = boxDir
+	envMap["BOX_BIN_DIR"] = binDir
 
 	for k, v := range cfg.Env {
 		envMap[k] = v

@@ -70,7 +70,9 @@ func (m *Manager) installGo(tool config.Tool, binDir string) error {
 func (m *Manager) EnsureEnvrc() error {
 	envrcPath := filepath.Join(m.RootDir, ".envrc")
 	boxDir := filepath.Join(m.RootDir, ".box")
+	binDir := filepath.Join(boxDir, "bin")
 	content := fmt.Sprintf("export BOX_DIR=\"%s\"\n", boxDir)
+	content += fmt.Sprintf("export BOX_BIN_DIR=\"%s\"\n", binDir)
 	content += "PATH_add .box/bin\n"
 
 	for k, v := range m.Env {
@@ -188,6 +190,7 @@ func (m *Manager) installScript(tool config.Tool) error {
 
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("BOX_DIR=%s", boxDir))
+	env = append(env, fmt.Sprintf("BOX_BIN_DIR=%s", binDir))
 	env = append(env, fmt.Sprintf("PATH=%s%s%s", binDir, string(os.PathListSeparator), os.Getenv("PATH")))
 	
 	// Add project custom env vars

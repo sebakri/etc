@@ -35,7 +35,7 @@ tools:
   - type: gem
     source: colorize
   - type: script
-    source: "curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b .box/bin v1.60.1"
+    source: "curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $BOX_BIN_DIR v1.60.1"
 env:
   DEBUG: "true"
   API_URL: "http://localhost:8080"
@@ -43,7 +43,7 @@ env:
 
 ### 3. Install Tools
 
-Run the install command to fetch and install all defined tools. Custom scripts have access to `BOX_DIR` and `.box/bin` is in their `PATH`.
+Run the install command to fetch and install all defined tools. Custom scripts have access to `BOX_DIR` and `BOX_BIN_DIR`. `.box/bin` is also in their `PATH`.
 
 ```bash
 box install
