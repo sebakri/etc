@@ -15,7 +15,22 @@ Box is a minimalist, project-local toolbox that keeps your development tools, bi
 
 ### 1. Installation
 
-Download the latest binary for your platform from the [Releases](https://github.com/sebakri/etc/releases) page and place it in your system PATH.
+Download the latest binary for your platform from the [Releases](https://github.com/sebakri/box/releases) page and place it in your system PATH.
+
+### Installer Script (Linux & macOS)
+
+Alternatively, you can use the installer script to automatically download and install the latest version of `box`:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/sebakri/box/main/scripts/install.sh | sh
+```
+
+The script will detect your OS and architecture, download the appropriate binary, and install it into `/usr/local/bin`. If you want to install it in a different directory, you can set the `BOX_INSTALL_DIR` environment variable:
+
+```bash
+export BOX_INSTALL_DIR="$HOME/.local/bin"
+curl -sSfL https://raw.githubusercontent.com/sebakri/box/main/scripts/install.sh | sh
+```
 
 ### 2. Configure Your Project
 
@@ -85,4 +100,4 @@ task --version
 
 ## Contributing
 
-We welcome contributions! Please check the [repository](https://github.com/sebakri/etc) for issues and pull requests.
+We welcome contributions! Please check the [repository](https://github.com/sebakri/box) for issues and pull requests.

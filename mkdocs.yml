@@ -2,5 +2,7 @@ site_name: box documentation
 theme:
   name: simple-blog
 
+repo_url: https://github.com/sebakri/box
+
 nav:
   - Home: index.md
