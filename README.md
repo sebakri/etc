@@ -1,13 +1,13 @@
 # Box - Minimalist project-local toolbox
 
-[![Deploy Documentation](https://github.com/sebakri/etc/actions/workflows/docs.yml/badge.svg)](https://sebakri.github.io/etc/)
-[![Release](https://github.com/sebakri/etc/actions/workflows/release.yml/badge.svg)](https://github.com/sebakri/etc/releases)
+[![Deploy Documentation](https://github.com/sebakri/box/actions/workflows/docs.yml/badge.svg)](https://sebakri.github.io/box/)
+[![Release](https://github.com/sebakri/box/actions/workflows/release.yml/badge.svg)](https://github.com/sebakri/box/releases)
 
 Box is a minimalist, project-local toolbox that keeps your development tools, binaries, and environment variables neatly packed and isolated within your project. It ensures a reproducible environment without cluttering your global system.
 
 ## Documentation
 
-Full documentation is available at [https://sebakri.github.io/etc/](https://sebakri.github.io/etc/)
+Full documentation is available at [https://sebakri.github.io/box/](https://sebakri.github.io/box/)
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ Full documentation is available at [https://sebakri.github.io/etc/](https://seba
 
 ## Installation
 
-Download the binary for your platform from the [latest releases](https://github.com/sebakri/etc/releases).
+Download the binary for your platform from the [latest releases](https://github.com/sebakri/box/releases).
 
 ## Commands
 
