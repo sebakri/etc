@@ -10,5 +10,3 @@ tools:
   - type: go
     source: github.com/golangci/golangci-lint/cmd/golangci-lint
     version: latest
-env:
-  APP_DEBUG: "true"

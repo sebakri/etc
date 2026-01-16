@@ -1,13 +1,26 @@
 site_name: box documentation
 theme:
-  name: simple-blog
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - toc.integrate
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: white
+      accent: indigo
+    - scheme: slate
+      primary: black
+      accent: indigo
+  font:
+    text: Roboto
+    code: Roboto Mono
 
 repo_url: https://github.com/sebakri/box
 
-extra_javascript:
-  - javascripts/extra.js
 extra_css:
   - stylesheets/extra.css
 
 nav:
-  - Home: index.md
+  - index.md
