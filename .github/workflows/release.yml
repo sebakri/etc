@@ -64,9 +64,14 @@ jobs:
           pattern: box-*
           merge-multiple: true
 
+      - name: Wait for API stability
+        run: sleep 10
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           files: ./artifacts/box-*
+          make_latest: true
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
