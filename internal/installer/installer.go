@@ -224,12 +224,34 @@ func (m *Manager) uninstallBestEffort(name string) error {
 }
 
 func (m *Manager) installGo(tool config.Tool, binDir string) error {
+	version := tool.Version
+	if version != "" && version != "latest" && version != "master" && !strings.HasPrefix(version, "v") {
+		// If it looks like a version (starts with a digit), try prepending 'v'
+		if len(version) > 0 && version[0] >= '0' && version[0] <= '9' {
+			version = "v" + version
+		}
+	}
+
 	source := tool.Source
-	if tool.Version != "" {
-		source = fmt.Sprintf("%s@%s", tool.Source, tool.Version)
+	if version != "" {
+		source = fmt.Sprintf("%s@%s", tool.Source, version)
 	}
 	fmt.Printf("Installing %s (go)...\n", tool.Name)
 
+	err := m.runGoInstall(source, binDir, tool.Name)
+	
+	// If it failed and we didn't have a 'v' prefix, try with it as a fallback
+	if err != nil && tool.Version != "" && !strings.HasPrefix(tool.Version, "v") && version == tool.Version {
+		fallbackVersion := "v" + tool.Version
+		fallbackSource := fmt.Sprintf("%s@%s", tool.Source, fallbackVersion)
+		fmt.Printf("Retrying %s with version %s...\n", tool.Name, fallbackVersion)
+		err = m.runGoInstall(fallbackSource, binDir, tool.Name)
+	}
+
+	return err
+}
+
+func (m *Manager) runGoInstall(source string, binDir string, toolName string) error {
 	tempDir, err := os.MkdirTemp("", "box-go-install-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
@@ -255,7 +277,13 @@ func (m *Manager) installGo(tool config.Tool, binDir string) error {
 	}
 
 	// The binary name is the last part of the source path (before @)
-	binaryName := tool.Source
+	// Strip version if present in source for binary name detection
+	sourcePath := source
+	if idx := strings.Index(sourcePath, "@"); idx != -1 {
+		sourcePath = sourcePath[:idx]
+	}
+	
+	binaryName := sourcePath
 	if idx := strings.LastIndex(binaryName, "/"); idx != -1 {
 		binaryName = binaryName[idx+1:]
 	}
@@ -283,7 +311,7 @@ func (m *Manager) installGo(tool config.Tool, binDir string) error {
 		return fmt.Errorf("could not find installed binary %s in %s", binaryName, tempDir)
 	}
 
-	destBinary := filepath.Join(binDir, tool.Name)
+	destBinary := filepath.Join(binDir, toolName)
 	if runtime.GOOS == "windows" && !strings.HasSuffix(destBinary, ".exe") {
 		destBinary += ".exe"
 	}
