@@ -13,17 +13,13 @@ import (
 
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
-	Use:       "generate <type>",
-	Short:     "Generates configuration files",
-	Long:      `Generates configuration files for shell integration, such as direnv.`,
-	ValidArgs: []string{"direnv"},
-	Args:      cobra.ExactArgs(1),
+	Use:   "generate <type>",
+	Short: "Generates configuration files",
+	Long:  `Generates configuration files for shell integration or containerization (e.g., direnv, dockerfile).`,
+	ValidArgs: []string{"direnv", "dockerfile"},
+	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		genType := args[0]
-		if genType != "direnv" {
-			fmt.Printf("Unknown generation type: %s\n", genType)
-			os.Exit(1)
-		}
 
 		configFile := "box.yml"
 		cfg, err := config.Load(configFile)
@@ -38,13 +34,21 @@ var generateCmd = &cobra.Command{
 
 		mgr := installer.New(cwd, cfg.Env)
 		mgr.Output = io.Discard
-		if err := mgr.EnsureEnvrc(); err != nil {
-			log.Fatalf("Failed to generate .envrc: %v", err)
-		}
 
-		fmt.Printf("%s Generated .envrc\n", successStyle.Render("✅"))
-		if err := mgr.AllowDirenv(); err != nil {
-			fmt.Printf("%s Failed to run direnv allow: %v\n", warnStyle.Render("⚠️"), err)
+		switch genType {
+		case "direnv":
+			if err := mgr.EnsureEnvrc(); err != nil {
+				log.Fatalf("Failed to generate .envrc: %v", err)
+			}
+			fmt.Printf("%s Generated .envrc\n", successStyle.Render("✅"))
+			if err := mgr.AllowDirenv(); err != nil {
+				fmt.Printf("%s Failed to run direnv allow: %v\n", warnStyle.Render("⚠️"), err)
+			}
+		case "dockerfile":
+			if err := mgr.GenerateDockerfile(); err != nil {
+				log.Fatalf("Failed to generate Dockerfile: %v", err)
+			}
+			fmt.Printf("%s Generated Dockerfile\n", successStyle.Render("✅"))
 		}
 	},
 }

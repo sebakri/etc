@@ -372,6 +372,49 @@ func (m *Manager) AllowDirenv() error {
 	return cmd.Run()
 }
 
+func (m *Manager) GenerateDockerfile() error {
+	dockerfilePath := filepath.Join(m.RootDir, "Dockerfile")
+	content := `FROM debian:bookworm-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates git build-essential \
+    nodejs npm ruby-full \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install latest Go
+RUN curl -LsSf https://go.dev/dl/go1.24.0.linux-amd64.tar.gz | tar -C /usr/local -xz
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Install cargo-binstall
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install.sh | sh
+
+# Install uv globally (accessible by all users)
+ENV UV_INSTALL_DIR="/usr/local/bin"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Copy box binary
+COPY --link --chmod=755 box /usr/local/bin/box
+
+# Set up user and workspace
+RUN useradd -m -s /bin/bash box
+USER box
+WORKDIR /home/box
+
+# Copy configuration and install tools
+COPY --chown=box:box box.yml .
+ENV CGO_ENABLED=0
+RUN box install --non-interactive
+
+# Add box binaries to PATH
+ENV PATH="/home/box/.box/bin:${PATH}"
+
+ENTRYPOINT ["/bin/bash"]
+`
+	m.log("Generating Dockerfile...")
+	return os.WriteFile(dockerfilePath, []byte(content), 0644)
+}
+
 func (m *Manager) installNpm(tool config.Tool, etcDir string) error {
 	source := tool.Source
 	if tool.Version != "" {
@@ -395,12 +438,12 @@ func (m *Manager) installCargo(tool config.Tool, etcDir string) error {
 	}
 	m.log("Installing %s (cargo)...", tool.Source)
 
-	// cargo binstall --root .etc <args> <package>
-	args := []string{"binstall", "--root", etcDir, "-y"}
+	// cargo-binstall --root .etc <args> <package>
+	args := []string{"--root", etcDir, "-y"}
 	args = append(args, tool.Args...)
 	args = append(args, source)
 
-	cmd := exec.Command("cargo", args...)
+	cmd := exec.Command("cargo-binstall", args...)
 
 	cmd.Stdout = m.Output
 	cmd.Stderr = m.Output

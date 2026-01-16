@@ -6,6 +6,11 @@ tasks:
     cmds:
       - go build -o box main.go
 
+  build-linux:
+    desc: Build the box binary for linux
+    cmds:
+      - GOOS=linux GOARCH=amd64 go build -o box main.go
+
   test:
     desc: Run tests
     cmds:

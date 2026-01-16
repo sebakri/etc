@@ -133,6 +133,8 @@ func (m model) View() string {
 	return s + helpStyle.Render("Press q to quit") + "\n"
 }
 
+var nonInteractive bool
+
 // installCmd represents the install command
 var installCmd = &cobra.Command{
 	Use:   "install",
@@ -154,6 +156,21 @@ var installCmd = &cobra.Command{
 		}
 
 		mgr := installer.New(cwd, cfg.Env)
+
+		if nonInteractive {
+			fmt.Println("Starting tool installation (non-interactive)...")
+			for _, tool := range cfg.Tools {
+				fmt.Printf("• Installing %s...\n", tool.Source)
+				if err := mgr.Install(tool); err != nil {
+					fmt.Printf("❌ Failed to install %s: %v\n", tool.Source, err)
+					os.Exit(1)
+				}
+				fmt.Printf("✅ Successfully installed %s\n", tool.Source)
+			}
+			fmt.Println("All tools installed successfully! ✨")
+			return
+		}
+
 		mgr.Output = io.Discard
 
 		tasks := make([]toolTask, len(cfg.Tools))
@@ -183,5 +200,6 @@ var installCmd = &cobra.Command{
 }
 
 func init() {
+	installCmd.Flags().BoolVarP(&nonInteractive, "non-interactive", "y", false, "Run in non-interactive mode (no TTY required)")
 	rootCmd.AddCommand(installCmd)
 }

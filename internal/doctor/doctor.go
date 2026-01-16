@@ -17,17 +17,13 @@ var (
 func Run() {
 	fmt.Println(titleStyle.Render("Checking box host environment tools..."))
 
-	tools := []string{"go", "npm", "cargo", "cargo-binstall", "uv", "gem", "direnv"}
+	tools := []string{"go", "npm", "cargo-binstall", "uv", "gem", "direnv"}
 	allFound := true
 
 	for _, tool := range tools {
 		path, err := exec.LookPath(tool)
 		if err != nil {
-			if tool == "cargo-binstall" {
-				fmt.Printf("%s %-14s : Not found (required for cargo tools)\n", errorStyle.Render("✗"), tool)
-			} else {
-				fmt.Printf("%s %-14s : Not found\n", errorStyle.Render("✗"), tool)
-			}
+			fmt.Printf("%s %-14s : Not found\n", errorStyle.Render("✗"), tool)
 			allFound = false
 		} else {
 			fmt.Printf("%s %-14s : %s\n", successStyle.Render("✓"), tool, dimStyle.Render(path))
