@@ -56,7 +56,10 @@ tools:
   - type: gem
     source: colorize
   - type: script
-    source: "curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $BOX_BIN_DIR v1.60.1"
+    alias: golangci-lint
+    source:
+      - echo "Installing for $BOX_OS $BOX_ARCH..."
+      - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $BOX_BIN_DIR v1.60.1
 env:
   DEBUG: "true"
   API_URL: "http://localhost:8080"
@@ -64,7 +67,14 @@ env:
 
 ### 3. Install Tools
 
-Run the install command to fetch and install all defined tools. Custom scripts have access to `BOX_DIR` and `BOX_BIN_DIR`. `.box/bin` is also in their `PATH`.
+Run the install command to fetch and install all defined tools. Custom scripts have access to several environment variables:
+
+- `BOX_DIR`: The path to the `.box` directory.
+- `BOX_BIN_DIR`: The path to the `.box/bin` directory.
+- `BOX_OS`: The current operating system (`runtime.GOOS`).
+- `BOX_ARCH`: The current architecture (`runtime.GOARCH`).
+
+`.box/bin` is also added to their `PATH`.
 
 ```bash
 box install
@@ -78,7 +88,17 @@ If you use `direnv`, generate the `.envrc` file:
 box generate direnv
 ```
 
-### 5. Use Your Tools
+### 5. Docker Integration (Optional)
+
+Box can generate a `Dockerfile` that sets up a development environment with all your tools pre-installed:
+
+```bash
+box generate dockerfile
+```
+
+This creates a `debian:bookworm-slim` based image with the necessary runtimes and your `box.yml` tools installed.
+
+### 6. Use Your Tools
 
 You can run tools directly using the `run` command:
 
@@ -99,6 +119,7 @@ task --version
 - `box run <command>`: Executes a binary from the local `.box/bin` directory.
 - `box env`: Displays the merged list of environment variables.
 - `box generate direnv`: Generates a `.envrc` file for `direnv` integration.
+- `box generate dockerfile`: Generates a `Dockerfile` for containerized development.
 - `box doctor`: Checks if the required host runtimes (Go, npm, Cargo, uv) are installed.
 - `box help`: Displays usage information.
 

@@ -9,7 +9,7 @@ ARG INSTALL_RUBY=true
 
 # Install system dependencies and selected package managers
 RUN apt-get update && \
-    PACKAGES="curl ca-certificates git build-essential" && \
+    PACKAGES="curl ca-certificates git build-essential direnv" && \
     if [ "$INSTALL_NODE" = "true" ]; then PACKAGES="$PACKAGES nodejs npm"; fi && \
     if [ "$INSTALL_RUBY" = "true" ]; then PACKAGES="$PACKAGES ruby-full"; fi && \
     apt-get install -y --no-install-recommends $PACKAGES && \
@@ -23,7 +23,8 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 
 # Install cargo-binstall if enabled
 RUN if [ "$INSTALL_CARGO" = "true" ]; then \
-    curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install.sh | sh; \
+    curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install.sh | sh && \
+    if [ -f "$HOME/.cargo/bin/cargo-binstall" ]; then mv "$HOME/.cargo/bin/cargo-binstall" /usr/local/bin/; fi; \
     fi
 
 # Install uv globally if enabled
@@ -47,4 +48,4 @@ RUN box install --non-interactive
 # Add box binaries to PATH
 ENV PATH="/home/box/.box/bin:${PATH}"
 
-ENTRYPOINT ["/bin/bash"]
+CMD ["/bin/bash"]
