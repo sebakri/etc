@@ -20,9 +20,6 @@ tools:
   - type: uv
     source: black
     version: 24.3.0
-  - type: go
-    source: github.com/golangci/golangci-lint/cmd/golangci-lint
-    version: v1.59.0
   - type: script
     alias: golangci-lint with script
     source:
