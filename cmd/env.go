@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"box/internal/config"
+
 	"github.com/spf13/cobra"
 )
 
@@ -16,18 +16,18 @@ var envCmd = &cobra.Command{
 	Use:   "env [key]",
 	Short: "Display the merged list of environment variables",
 	Run: func(cmd *cobra.Command, args []string) {
-		cwd, err := os.Getwd()
+		configFile, err := findNearestBoxConfig()
 		if err != nil {
-			log.Fatalf("Failed to get current working directory: %v", err)
+			fmt.Fprintf(os.Stderr, "Warning: Could not find box.yml: %v\n", err)
+			return
 		}
 
-		configFile := "box.yml"
 		cfg, err := config.Load(configFile)
 		if err != nil {
 			cfg = &config.Config{}
 		}
 
-		boxDir := filepath.Join(cwd, ".box")
+		boxDir := filepath.Dir(configFile)
 		binDir := filepath.Join(boxDir, "bin")
 
 		// Get current environment and merge with box.yml env and updated PATH
@@ -80,4 +80,26 @@ var envCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(envCmd)
+}
+
+func findNearestBoxConfig() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		configPath := filepath.Join(dir, "box.yml")
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath, nil
+		}
+
+		parentDir := filepath.Dir(dir)
+		if parentDir == dir {
+			break // Reached root directory
+		}
+		dir = parentDir
+	}
+
+	return "", fmt.Errorf("box.yml not found in current or parent directories")
 }
