@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -18,6 +17,9 @@ type Manager struct {
 	RootDir string
 	Env     map[string]string
 	Output  io.Writer
+
+	// installers map tool types to their implementation
+	installers map[string]Installer
 }
 
 type ToolManifest struct {
@@ -29,11 +31,26 @@ type Manifest struct {
 }
 
 func New(rootDir string, env map[string]string) *Manager {
-	return &Manager{
-		RootDir: rootDir,
-		Env:     env,
-		Output:  os.Stdout,
+	m := &Manager{
+		RootDir:    rootDir,
+		Env:        env,
+		Output:     os.Stdout,
+		installers: make(map[string]Installer),
 	}
+
+	// Register default installers
+	m.RegisterInstaller("go", &GoInstaller{})
+	m.RegisterInstaller("npm", &NpmInstaller{})
+	m.RegisterInstaller("cargo", &CargoInstaller{})
+	m.RegisterInstaller("uv", &UvInstaller{})
+	m.RegisterInstaller("gem", &GemInstaller{})
+	m.RegisterInstaller("script", &ScriptInstaller{})
+
+	return m
+}
+
+func (m *Manager) RegisterInstaller(toolType string, installer Installer) {
+	m.installers[toolType] = installer
 }
 
 func (m *Manager) log(format string, a ...any) {
@@ -52,32 +69,18 @@ func (m *Manager) Install(tool config.Tool) error {
 	}
 
 	// Capture state before install
-
 	before, err := m.captureState()
 	if err != nil {
 		return fmt.Errorf("failed to capture state before install: %w", err)
 	}
 
-	var installErr error
-	switch tool.Type {
-	case "go":
-		installErr = m.installGo(tool, binDir)
-	case "npm":
-		installErr = m.installNpm(tool, boxDir)
-	case "cargo":
-		installErr = m.installCargo(tool, boxDir)
-	case "uv":
-		installErr = m.installUv(tool, binDir)
-	case "gem":
-		installErr = m.installGem(tool, binDir)
-	case "script":
-		installErr = m.installScript(tool)
-	default:
+	installer, ok := m.installers[tool.Type]
+	if !ok {
 		return fmt.Errorf("unsupported tool type: %s", tool.Type)
 	}
 
-	if installErr != nil {
-		return installErr
+	if err := installer.Install(tool, m); err != nil {
+		return err
 	}
 
 	// Capture state after install and find new files
@@ -267,13 +270,10 @@ func (m *Manager) runGoInstall(source string, binDir string) error {
 	}
 
 	// Run go install with a persistent GOPATH in .box/go
-	cmd := exec.Command("go", "install", source)
-	env := os.Environ()
-
-	// Explicitly set GOBIN to .box/go/bin to ensure we know where it lands
 	goBinDir := filepath.Join(goDir, "bin")
 
 	// Filter out GOBIN and GOPATH from existing env to ensure ours take precedence cleanly
+	env := os.Environ()
 	newEnv := []string{}
 	for _, e := range env {
 		if !strings.HasPrefix(e, "GOBIN=") && !strings.HasPrefix(e, "GOPATH=") {
@@ -285,10 +285,8 @@ func (m *Manager) runGoInstall(source string, binDir string) error {
 	// Do not set GOBIN, rely on GOPATH/bin to avoid "cross-compiled" errors
 	// newEnv = append(newEnv, fmt.Sprintf("GOBIN=%s", goBinDir))
 
-	cmd.Env = newEnv
-	cmd.Stdout = m.Output
-	cmd.Stderr = m.Output
-	if err := cmd.Run(); err != nil {
+	err := m.runCommand("go", []string{"install", source}, newEnv, "")
+	if err != nil {
 		return err
 	}
 
@@ -376,11 +374,7 @@ func (m *Manager) EnsureEnvrc() error {
 
 func (m *Manager) AllowDirenv() error {
 	m.log("Running direnv allow...")
-	cmd := exec.Command("direnv", "allow")
-	cmd.Dir = m.RootDir
-	cmd.Stdout = m.Output
-	cmd.Stderr = m.Output
-	return cmd.Run()
+	return m.runCommand("direnv", []string{"allow"}, nil, m.RootDir)
 }
 
 func (m *Manager) GenerateDockerfile() error {
@@ -393,12 +387,14 @@ ARG INSTALL_NODE=true
 ARG INSTALL_CARGO=true
 ARG INSTALL_UV=true
 ARG INSTALL_RUBY=true
+ARG INSTALL_PIP=true
 
 # Install system dependencies and selected package managers
 RUN apt-get update && \
     PACKAGES="curl ca-certificates git build-essential direnv" && \
     if [ "$INSTALL_NODE" = "true" ]; then PACKAGES="$PACKAGES nodejs npm"; fi && \
     if [ "$INSTALL_RUBY" = "true" ]; then PACKAGES="$PACKAGES ruby-full"; fi && \
+    if [ "$INSTALL_PIP" = "true" ]; then PACKAGES="$PACKAGES python3-pip"; fi && \
     apt-get install -y --no-install-recommends $PACKAGES && \
     rm -rf /var/lib/apt/lists/*
 
@@ -449,12 +445,7 @@ func (m *Manager) installNpm(tool config.Tool, etcDir string) error {
 	m.log("Installing %s (npm)...", tool.DisplayName())
 
 	// npm install --prefix .etc -g <package>
-	cmd := exec.Command("npm", "install", "--prefix", etcDir, "-g", source)
-
-	cmd.Stdout = m.Output
-	cmd.Stderr = m.Output
-
-	return cmd.Run()
+	return m.runCommand("npm", []string{"install", "--prefix", etcDir, "-g", source}, nil, "")
 }
 
 func (m *Manager) installCargo(tool config.Tool, etcDir string) error {
@@ -469,12 +460,7 @@ func (m *Manager) installCargo(tool config.Tool, etcDir string) error {
 	args = append(args, tool.Args...)
 	args = append(args, source)
 
-	cmd := exec.Command("cargo-binstall", args...)
-
-	cmd.Stdout = m.Output
-	cmd.Stderr = m.Output
-
-	return cmd.Run()
+	return m.runCommand("cargo-binstall", args, nil, "")
 }
 
 func (m *Manager) installUv(tool config.Tool, binDir string) error {
@@ -493,17 +479,11 @@ func (m *Manager) installUv(tool config.Tool, binDir string) error {
 	args = append(args, tool.Args...)
 	args = append(args, source)
 
-	cmd := exec.Command("uv", args...)
-
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("UV_TOOL_BIN_DIR=%s", binDir))
 	env = append(env, fmt.Sprintf("UV_TOOL_DIR=%s", uvDir))
-	cmd.Env = env
 
-	cmd.Stdout = m.Output
-	cmd.Stderr = m.Output
-
-	return cmd.Run()
+	return m.runCommand("uv", args, env, "")
 }
 
 func (m *Manager) installGem(tool config.Tool, binDir string) error {
@@ -520,12 +500,7 @@ func (m *Manager) installGem(tool config.Tool, binDir string) error {
 	args = append(args, tool.Args...)
 	args = append(args, tool.Source.String())
 
-	cmd := exec.Command("gem", args...)
-
-	cmd.Stdout = m.Output
-	cmd.Stderr = m.Output
-
-	return cmd.Run()
+	return m.runCommand("gem", args, nil, "")
 }
 
 func (m *Manager) installScript(tool config.Tool) error {
@@ -533,9 +508,6 @@ func (m *Manager) installScript(tool config.Tool) error {
 
 	boxDir := filepath.Join(m.RootDir, ".box")
 	binDir := filepath.Join(boxDir, "bin")
-
-	cmd := exec.Command("sh", "-c", tool.Source.String())
-	cmd.Dir = m.RootDir
 
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("BOX_DIR=%s", boxDir))
@@ -548,10 +520,6 @@ func (m *Manager) installScript(tool config.Tool) error {
 	for k, v := range m.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
-	cmd.Env = env
 
-	cmd.Stdout = m.Output
-	cmd.Stderr = m.Output
-
-	return cmd.Run()
+	return m.runCommand("sh", []string{"-c", tool.Source.String()}, env, m.RootDir)
 }
