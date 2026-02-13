@@ -1,0 +1,45 @@
+name: Auto Tag
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install svu
+        run: go install github.com/caarlos0/svu@latest
+
+      - name: Calculate next version
+        id: version
+        run: |
+          NEXT_TAG=$(svu next)
+          if [ "$NEXT_TAG" != "$(svu current)" ]; then
+            echo "tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+            echo "New version detected: $NEXT_TAG"
+          else
+            echo "No new version detected."
+          fi
+
+      - name: Push Tag
+        if: steps.version.outputs.tag != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
