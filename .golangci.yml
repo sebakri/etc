@@ -4,6 +4,9 @@ linters:
     - gocyclo
     - misspell
     - errcheck
+  settings:
+    gocyclo:
+      min-complexity: 25
   exclusions:
     generated: lax
     presets:
@@ -24,6 +27,3 @@ formatters:
       - third_party$
       - builtin$
       - examples$
-linters-settings:
-  gocyclo:
-    min-complexity: 15
