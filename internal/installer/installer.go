@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"box/internal/config"
+	"github.com/sebakri/box/internal/config"
 )
 
 type Manager struct {

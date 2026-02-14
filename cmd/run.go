@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"box/internal/config"
+	"github.com/sebakri/box/internal/config"
 
 	"github.com/spf13/cobra"
 )

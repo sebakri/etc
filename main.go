@@ -1,7 +1,7 @@
 package main
 
 import (
-	"box/cmd"
+	"github.com/sebakri/box/cmd"
 )
 
 func main() {

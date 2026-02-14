@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"box/internal/config"
+	"github.com/sebakri/box/internal/config"
 
 	"github.com/spf13/cobra"
 )

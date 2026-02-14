@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"box/internal/config"
-	"box/internal/installer"
+	"github.com/sebakri/box/internal/config"
+	"github.com/sebakri/box/internal/installer"
 	"github.com/spf13/cobra"
 )
 

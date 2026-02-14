@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"box/internal/config"
+	"github.com/sebakri/box/internal/config"
 )
 
 func TestInstallGoWithVersion(t *testing.T) {

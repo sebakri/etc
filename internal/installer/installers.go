@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"box/internal/config"
+	"github.com/sebakri/box/internal/config"
 )
 
 // Installer is the interface that all tool installers must implement.

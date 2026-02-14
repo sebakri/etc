@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"box/internal/doctor"
+	"github.com/sebakri/box/internal/doctor"
 	"github.com/spf13/cobra"
 )
 

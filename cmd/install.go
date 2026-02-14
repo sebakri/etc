@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"box/internal/config"
-	"box/internal/installer"
+	"github.com/sebakri/box/internal/config"
+	"github.com/sebakri/box/internal/installer"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"

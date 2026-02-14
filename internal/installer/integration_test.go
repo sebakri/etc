@@ -11,7 +11,7 @@ import (
 
 	"testing"
 
-	"box/internal/config"
+	"github.com/sebakri/box/internal/config"
 )
 
 func TestIntegrationInstallation(t *testing.T) {

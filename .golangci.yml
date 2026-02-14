@@ -1,29 +1,37 @@
 version: "2"
-linters:
-  enable:
-    - gocyclo
-    - misspell
-    - errcheck
-  settings:
-    gocyclo:
-      min-complexity: 25
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+
+run:
+  # Timeout for analysis, e.g. 30s, 5m.
+  timeout: 5m
+
+# In v2, formatters (tools that fix code) are separated from linters (tools that analyze code).
 formatters:
   enable:
     - gofmt
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    - goimports
+  settings:
+    goimports:
+      # Put your local package prefix here to group imports correctly
+      local-prefixes:
+        - github.com/sebakri/box
+
+linters:
+  # "default: none" replaces the old "disable-all: true"
+  default: none
+  enable:
+    # Standard Defaults
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    # Highly recommended extras
+    - gocyclo # Checks function complexity
+    - misspell # Checks for common misspellings
+    - revive # A stricter replacement for golint
+    - gocritic # A collection of various checks
+    - gosec # Security-related checks
+
+  settings:
+    gocyclo:
+      min-complexity: 15

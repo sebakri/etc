@@ -1,4 +1,4 @@
-module box
+module github.com/sebakri/box
 
 go 1.24.2
 
