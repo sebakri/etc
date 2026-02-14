@@ -125,11 +125,12 @@ func (m model) View() string {
 
 	for i, t := range m.tasks {
 		status := " "
-		if t.status == statusInstalling {
+		switch t.status {
+		case statusInstalling:
 			status = m.spinner.View()
-		} else if t.status == statusDone {
+		case statusDone:
 			status = checkMark.String()
-		} else if t.status == statusFailed {
+		case statusFailed:
 			status = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render("✗")
 		}
 

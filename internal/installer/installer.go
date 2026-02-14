@@ -55,7 +55,7 @@ func (m *Manager) RegisterInstaller(toolType string, installer Installer) {
 
 func (m *Manager) log(format string, a ...any) {
 	if m.Output != nil {
-		fmt.Fprintf(m.Output, format+"\n", a...)
+		_, _ = fmt.Fprintf(m.Output, format+"\n", a...)
 	}
 }
 
@@ -130,7 +130,7 @@ func (m *Manager) updateManifest(name string, files []string) error {
 
 	if file, err := os.Open(manifestPath); err == nil {
 		_ = gob.NewDecoder(file).Decode(&manifest)
-		file.Close()
+		_ = file.Close()
 	}
 
 	manifest.Tools[name] = ToolManifest{Files: files}
@@ -139,7 +139,7 @@ func (m *Manager) updateManifest(name string, files []string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return gob.NewEncoder(file).Encode(manifest)
 }
@@ -155,7 +155,7 @@ func (m *Manager) LoadManifest() (*Manifest, error) {
 		}
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	err = gob.NewDecoder(file).Decode(&manifest)
 	return &manifest, err
@@ -174,7 +174,7 @@ func (m *Manager) Uninstall(name string) error {
 		return err
 	}
 	err = gob.NewDecoder(file).Decode(&manifest)
-	file.Close()
+	_ = file.Close()
 	if err != nil {
 		return err
 	}
@@ -207,11 +207,11 @@ func (m *Manager) Uninstall(name string) error {
 			entries, _ := os.ReadDir(fullPath)
 			if len(entries) == 0 {
 				m.log("Removing empty directory %s...", file)
-				os.Remove(fullPath)
+				_ = os.Remove(fullPath)
 			}
 		} else {
 			m.log("Removing file %s...", file)
-			os.Remove(fullPath)
+			_ = os.Remove(fullPath)
 		}
 	}
 
@@ -221,7 +221,7 @@ func (m *Manager) Uninstall(name string) error {
 	if err != nil {
 		return err
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 	return gob.NewEncoder(outFile).Encode(manifest)
 }
 
@@ -232,26 +232,22 @@ func (m *Manager) uninstallBestEffort(name string) error {
 	binaryPath := filepath.Join(binDir, name)
 	if _, err := os.Stat(binaryPath); err == nil {
 		m.log("Removing binary %s...", binaryPath)
-		os.Remove(binaryPath)
+		_ = os.Remove(binaryPath)
 	}
 
 	uvToolDir := filepath.Join(boxDir, "uv", name)
 	if _, err := os.Stat(uvToolDir); err == nil {
 		m.log("Removing data directory %s...", uvToolDir)
-		os.RemoveAll(uvToolDir)
+		_ = os.RemoveAll(uvToolDir)
 	}
 
 	return nil
 }
 
 func (m *Manager) installGo(tool config.Tool, binDir string) error {
-	source := tool.Source.String()
-	if tool.Version != "" {
-		source = fmt.Sprintf("%s@%s", source, tool.Version)
-	}
 	m.log("Installing %s (go)...", tool.DisplayName())
 
-	err := m.runGoInstall(source, binDir)
+	err := m.runGoInstall(tool, binDir)
 	if err != nil {
 		if tool.Version != "" && !strings.HasPrefix(tool.Version, "v") && len(tool.Version) > 0 && tool.Version[0] >= '0' && tool.Version[0] <= '9' {
 			m.log("Hint: Go tools often require a 'v' prefix for versions (e.g., v%s instead of %s)", tool.Version, tool.Version)
@@ -262,7 +258,12 @@ func (m *Manager) installGo(tool config.Tool, binDir string) error {
 	return nil
 }
 
-func (m *Manager) runGoInstall(source string, binDir string) error {
+func (m *Manager) runGoInstall(tool config.Tool, binDir string) error {
+	source := tool.Source.String()
+	if tool.Version != "" {
+		source = fmt.Sprintf("%s@%s", source, tool.Version)
+	}
+
 	boxDir := filepath.Join(m.RootDir, ".box")
 	goDir := filepath.Join(boxDir, "go")
 	if err := os.MkdirAll(goDir, 0755); err != nil {
@@ -290,65 +291,93 @@ func (m *Manager) runGoInstall(source string, binDir string) error {
 		return err
 	}
 
-	// The binary name is the last part of the source path (before @)
-	// Strip version if present in source for binary name detection
-	sourcePath := source
-	if idx := strings.Index(sourcePath, "@"); idx != -1 {
-		sourcePath = sourcePath[:idx]
+	binaries := tool.Binaries
+	if len(binaries) == 0 {
+		// The binary name is the last part of the source path (before @)
+		// Strip version if present in source for binary name detection
+		sourcePath := source
+		if idx := strings.Index(sourcePath, "@"); idx != -1 {
+			sourcePath = sourcePath[:idx]
+		}
+
+		// Strip major version suffix (e.g. /v2, /v3) if it's the last part of the path
+		// This is common in Go modules.
+		if parts := strings.Split(sourcePath, "/"); len(parts) > 1 {
+			lastPart := parts[len(parts)-1]
+			if len(lastPart) >= 2 && lastPart[0] == 'v' && isDigit(lastPart[1:]) {
+				sourcePath = strings.Join(parts[:len(parts)-1], "/")
+			}
+		}
+
+		binaryName := sourcePath
+		if idx := strings.LastIndex(binaryName, "/"); idx != -1 {
+			binaryName = binaryName[idx+1:]
+		}
+		binaries = []string{binaryName}
 	}
 
-	binaryName := sourcePath
-	if idx := strings.LastIndex(binaryName, "/"); idx != -1 {
-		binaryName = binaryName[idx+1:]
-	}
+	for _, name := range binaries {
+		srcBinary, err := m.findBinary(goBinDir, name)
+		if err != nil {
+			return err
+		}
 
-	// On Windows, append .exe
-	if runtime.GOOS == "windows" && !strings.HasSuffix(binaryName, ".exe") {
-		binaryName += ".exe"
-	}
+		destBinary := filepath.Join(binDir, name)
+		if runtime.GOOS == "windows" && !strings.HasSuffix(destBinary, ".exe") {
+			destBinary += ".exe"
+		}
 
-	srcBinary, err := m.findBinary(goBinDir, binaryName)
-	if err != nil {
-		return err
-	}
+		// Ensure any existing file/link is removed first
+		_ = os.Remove(destBinary)
 
-	destBinary := filepath.Join(binDir, binaryName)
-	if runtime.GOOS == "windows" && !strings.HasSuffix(destBinary, ".exe") {
-		destBinary += ".exe"
-	}
+		// Try symlinking first (relative path is better for portability)
+		relPath, err := filepath.Rel(binDir, srcBinary)
+		if err == nil {
+			m.log("Symlinking %s to %s...", relPath, destBinary)
+			err = os.Symlink(relPath, destBinary)
+			if err == nil {
+				continue
+			}
+			m.log("Symlink failed, falling back to copy: %v", err)
+		}
 
-	m.log("Copying %s to %s...", srcBinary, destBinary)
+		m.log("Copying %s to %s...", srcBinary, destBinary)
+		input, err := os.ReadFile(srcBinary)
+		if err != nil {
+			return fmt.Errorf("failed to read installed binary %s: %w", srcBinary, err)
+		}
 
-	input, err := os.ReadFile(srcBinary)
-	if err != nil {
-		return fmt.Errorf("failed to read installed binary %s: %w", srcBinary, err)
-	}
-
-	if err := os.WriteFile(destBinary, input, 0755); err != nil {
-		return fmt.Errorf("failed to copy binary to .box/bin: %w", err)
+		if err := os.WriteFile(destBinary, input, 0755); err != nil {
+			return fmt.Errorf("failed to copy binary to .box/bin: %w", err)
+		}
 	}
 
 	return nil
 }
 
 func (m *Manager) findBinary(searchDir, name string) (string, error) {
-	var srcBinary string
+	var newestBinary string
+	var newestModTime os.FileInfo
+
 	err := filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() && (info.Name() == name || info.Name() == name+".exe") {
-			srcBinary = path
-			return io.EOF
+			if newestBinary == "" || info.ModTime().After(newestModTime.ModTime()) {
+				newestBinary = path
+				newestModTime = info
+			}
 		}
 		return nil
 	})
 
-	if err == io.EOF {
-		return srcBinary, nil
-	}
 	if err != nil {
 		return "", err
+	}
+
+	if newestBinary != "" {
+		return newestBinary, nil
 	}
 
 	return "", fmt.Errorf("could not find installed binary %s in %s", name, searchDir)
@@ -522,4 +551,16 @@ func (m *Manager) installScript(tool config.Tool) error {
 	}
 
 	return m.runCommand("sh", []string{"-c", tool.Source.String()}, env, m.RootDir)
+}
+
+func isDigit(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }

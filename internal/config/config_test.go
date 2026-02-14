@@ -20,7 +20,7 @@ env:
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name()) // clean up
+	defer func() { _ = os.Remove(tmpfile.Name()) }() // clean up
 
 	if _, err := tmpfile.Write(content); err != nil {
 		t.Fatal(err)
@@ -60,7 +60,7 @@ tools:
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 	if _, err := tmpfile.Write(content); err != nil {
 		t.Fatal(err)

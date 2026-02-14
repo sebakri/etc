@@ -18,13 +18,13 @@ func TestInstallGoWithVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
+		_ = filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
 			if err == nil {
-				os.Chmod(path, 0777)
+				_ = os.Chmod(path, 0777)
 			}
 			return nil
 		})
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 	}()
 
 	m := New(tmpDir, nil)

@@ -6,9 +6,7 @@ hide:
 
 # Box - Minimalist project-local toolbox
 
-<p align="center">
-  <img src="assets/logo.jpg" width="50%" alt="Box Logo">
-</p>
+![Box Logo](assets/logo.jpg){: style="width: 50%; display: block; margin: 0 auto;" }
 
 Box is a minimalist, project-local toolbox that keeps your development tools, binaries, and environment variables neatly packed and isolated within your project. It allows you to define and install project-specific tools locally without requiring root permissions, keeping your global environment clean and your development setup reproducible.
 

@@ -1,4 +1,9 @@
 tools:
   - type: go
+    source: github.com/go-task/task/v3/cmd/task
+    version: v3.40.0
+  - type: go
     source: github.com/caarlos0/svu
     version: v1.12.0
+    binaries:
+      - svu

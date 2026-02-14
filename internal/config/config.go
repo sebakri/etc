@@ -38,11 +38,12 @@ func (s Source) String() string {
 }
 
 type Tool struct {
-	Type    string   `yaml:"type"`              // "go", "npm", "cargo", "uv", "gem", "script"
-	Source  Source   `yaml:"source"`            // Package path or script command
-	Alias   string   `yaml:"alias,omitempty"`   // Optional alias for display
-	Version string   `yaml:"version,omitempty"` // Optional version (e.g., "latest", "0.1.0")
-	Args    []string `yaml:"args,omitempty"`
+	Type     string   `yaml:"type"`               // "go", "npm", "cargo", "uv", "gem", "script"
+	Source   Source   `yaml:"source"`             // Package path or script command
+	Alias    string   `yaml:"alias,omitempty"`    // Optional alias for display
+	Version  string   `yaml:"version,omitempty"`  // Optional version (e.g., "latest", "0.1.0")
+	Binaries []string `yaml:"binaries,omitempty"` // Optional explicit list of binaries
+	Args     []string `yaml:"args,omitempty"`
 }
 
 func (t Tool) DisplayName() string {
