@@ -114,15 +114,42 @@ jobs:
       - name: Run Tests
         run: task test
 
+  lint:
+    name: Lint
+    needs: tag
+    if: always() && (needs.tag.outputs.tag != '' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.4.0
+
   release:
     name: Create Release
-    needs: [tag, build, test]
+    needs: [tag, build, test, lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Install svu
+        run: go install github.com/caarlos0/svu@latest
 
       - name: Determine Version
         id: vars
@@ -132,6 +159,37 @@ jobs:
           else
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Validate Tag
+        if: github.ref_type == 'tag'
+        run: |
+          TAG=${{ github.ref_name }}
+
+          # Get expected versions based on the state BEFORE the tag was pushed
+          # We use HEAD^ because the current commit IS the tag.
+          git checkout HEAD^
+          CURRENT=$(svu current)
+          NEXT=$(svu next)
+          git checkout $TAG
+
+          echo "Validating manual tag release:"
+          echo "  Pushed Tag:      $TAG"
+          echo "  Current Version: $CURRENT"
+          echo "  Next Expected:   $NEXT"
+
+          # Check if TAG > CURRENT
+          if [ "$TAG" == "$CURRENT" ] || [ "$(echo -e "$TAG\n$CURRENT" | sort -V | head -n1)" == "$TAG" ]; then
+            echo "Error: Pushed tag $TAG must be greater than current version $CURRENT"
+            exit 1
+          fi
+
+          # Check if TAG >= NEXT
+          if [ "$(echo -e "$TAG\n$NEXT" | sort -V | head -n1)" != "$NEXT" ] && [ "$TAG" != "$NEXT" ]; then
+            echo "Error: Pushed tag $TAG must be greater than or equal to next expected version $NEXT"
+            exit 1
+          fi
+
+          echo "Tag validation successful. Proceeding with release."
 
       - name: Push Tag
         if: needs.tag.outputs.tag != ''
