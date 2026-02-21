@@ -18,6 +18,7 @@ In an ecosystem with many tool managers, Box stands out for its "glue" philosoph
 - **Portable "Toolbox"**: By keeping everything in `.box/`, your project becomes a self-contained unit. You can move the project folder, and your tools move with it.
 - **Scriptable**: The `script` installer type allows you to handle edge cases and proprietary tools using standard shell commands, while still benefiting from Box's environment management.
 - **CI/CD Ready**: Since it's a single binary and uses standard installers, it's trivial to use in GitHub Actions or any other CI provider to ensure your build environment matches your local one.
+- **Secure-by-Default**: Custom scripts and tools run in a restricted sandbox, preventing them from damaging your system outside the project directory.
 
 ## Key Features
 
@@ -26,6 +27,7 @@ In an ecosystem with many tool managers, Box stands out for its "glue" philosoph
 - **Declarative Setup**: Define all required tools and env vars in a simple `box.yml` file.
 - **Multi-Runtime Support**: Works seamlessly with Go, npm, Cargo, uv, and gem.
 - **direnv Integration**: Automatically manages your `PATH` and `ENV` using `.envrc`.
+- **Mandatory Sandboxing**: Custom scripts and tools are automatically isolated on macOS and Linux.
 - **Cross-Platform**: Built in Go, supporting Linux, macOS, and Windows.
 
 ## Quick Start
@@ -107,6 +109,15 @@ Scripts have access to several environment variables:
 - `BOX_BIN_DIR`: The path to the `.box/bin` directory.
 - `BOX_OS`: The current operating system (`runtime.GOOS`).
 - `BOX_ARCH`: The current architecture (`runtime.GOARCH`).
+
+## Security
+
+Box takes security seriously by implementing several layers of protection:
+
+- **Mandatory Sandboxing**: Any `script` defined in `box.yml` and any tool executed via `box run` is automatically sandboxed using OS-native primitives (`sandbox-exec` on macOS, User Namespaces on Linux).
+- **Strict Isolation**: Sandboxed scripts are restricted to writing only within the project root, the `.box` directory, and a dedicated session-specific temporary directory.
+- **Environment Protection**: All environment variables and paths exported to `.envrc` are properly escaped to prevent shell injection attacks.
+- **Transparent Manifest**: Tool tracking is stored in a human-readable JSON format (`.box/manifest.json`), allowing you to audit exactly what was installed.
 
 ### 3. Install Tools
 

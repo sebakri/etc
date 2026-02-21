@@ -13,6 +13,7 @@ While there are many tool managers (like `asdf`, `mise`, or `aqua`), Box is desi
 - **True Project Isolation**: Everything—binaries, caches, and metadata—lives inside your project's `.box` folder. Deleting the folder completely removes the tools.
 - **Zero Dependencies**: Box is a single Go binary. You don't need Nix, a plugin system, or a complex runtime to get started.
 - **Transparent Wrapper**: It doesn't replace your package managers; it coordinates them to keep your workspace clean.
+- **Secure-by-Default**: Custom scripts and tools run in a restricted sandbox, preventing them from damaging your system outside the project directory.
 
 ## Documentation
 
@@ -52,6 +53,16 @@ Full documentation is available at [https://sebakri.github.io/box/](https://seba
 - **Declarative Configuration**: Defined in `box.yml`.
 - **Manual or Automatic PATH**: Use `box run` or generate a `.envrc` for `direnv`.
 - **Docker Integration**: Generate a pre-configured `Dockerfile` with all your tools.
+- **Mandatory Sandboxing**: Custom scripts and tools are automatically isolated on macOS and Linux.
+
+## Security
+
+Box takes security seriously by implementing several layers of protection:
+
+- **Mandatory Sandboxing**: Any `script` defined in `box.yml` and any tool executed via `box run` is automatically sandboxed using OS-native primitives (`sandbox-exec` on macOS, User Namespaces on Linux).
+- **Strict Isolation**: Sandboxed scripts are restricted to writing only within the project root, the `.box` directory, and a dedicated session-specific temporary directory.
+- **Environment Protection**: All environment variables and paths exported to `.envrc` are properly escaped to prevent shell injection attacks.
+- **Transparent Manifest**: Tool tracking is stored in a human-readable JSON format (`.box/manifest.json`), allowing you to audit exactly what was installed.
 
 ## Installation
 
