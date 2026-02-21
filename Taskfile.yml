@@ -36,3 +36,21 @@ tasks:
     cmds:
       - go build -o box main.go
       - sudo mv box /usr/local/bin/box
+
+  tag:
+    desc: "Create a new tag based on commits"
+    cmds:
+      - |
+        NEXT_TAG=$(svu next)
+        if [ "$NEXT_TAG" != "$(svu current)" ]; then
+          git tag $NEXT_TAG
+          echo "Created tag $NEXT_TAG"
+        else
+          echo "No version bump required"
+        fi
+
+  release:
+    desc: "Create a tag and push to trigger release"
+    cmds:
+      - task: tag
+      - git push origin main --tags
