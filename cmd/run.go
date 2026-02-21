@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,17 +17,18 @@ var runCmd = &cobra.Command{
 	Use:                "run <command> [args...]",
 	Short:              "Execute a binary from the local .box/bin directory",
 	DisableFlagParsing: true,
+	SilenceUsage:       true,
 	Args:               cobra.MinimumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		commandName := args[0]
 		if commandName != filepath.Base(commandName) {
-			log.Fatalf("Invalid command name %q: path separators are not allowed", commandName)
+			return fmt.Errorf("invalid command name %q: path separators are not allowed", commandName)
 		}
 		commandArgs := args[1:]
 
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("Failed to get current working directory: %v", err)
+			return fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
 		configFile := "box.yml"
@@ -44,13 +44,13 @@ var runCmd = &cobra.Command{
 		binaryPath := filepath.Join(binDir, commandName)
 
 		if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-			log.Fatalf("Binary %s not found in .box/bin. Have you run 'box install'?", commandName)
+			return fmt.Errorf("binary %s not found in .box/bin. Have you run 'box install'?", commandName)
 		}
 
 		// Create a specific temp directory for this run
 		tempDir, err := os.MkdirTemp("", "box-run-*")
 		if err != nil {
-			log.Fatalf("Failed to create temporary directory: %v", err)
+			return fmt.Errorf("failed to create temporary directory: %w", err)
 		}
 		defer func() {
 			_ = os.RemoveAll(tempDir)
@@ -103,11 +103,12 @@ var runCmd = &cobra.Command{
 			if exitError, ok := err.(*exec.ExitError); ok {
 				os.Exit(exitError.ExitCode())
 			}
-			log.Fatalf("Failed to execute %s: %v", commandName, err)
+			return fmt.Errorf("failed to execute %s: %w", commandName, err)
 		}
+		return nil
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(runCmd)
+	RootCmd.AddCommand(runCmd)
 }

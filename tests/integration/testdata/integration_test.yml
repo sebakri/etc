@@ -1,0 +1,6 @@
+tools:
+  - type: go
+    source: github.com/go-task/task/v3/cmd/task
+    version: v3.40.0
+env:
+  APP_DEBUG: "true"

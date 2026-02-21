@@ -13,11 +13,12 @@ var Version = "dev"
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version of box",
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		fmt.Println("box", Version)
+		return nil
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(versionCmd)
 }

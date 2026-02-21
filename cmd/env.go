@@ -15,11 +15,10 @@ import (
 var envCmd = &cobra.Command{
 	Use:   "env [key]",
 	Short: "Display the merged list of environment variables",
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		configFile, err := findNearestBoxConfig()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Could not find box.yml: %v\n", err)
-			return
+			return fmt.Errorf("could not find box.yml: %w", err)
 		}
 
 		cfg, err := config.Load(configFile)
@@ -66,20 +65,21 @@ var envCmd = &cobra.Command{
 			key := args[0]
 			if val, ok := envMap[key]; ok {
 				fmt.Print(val) // Print without newline for shell substitution $(bx env BOX_DIR)
-				return
+				return nil
 			}
-			os.Exit(1)
+			return fmt.Errorf("environment variable %s not found", key)
 		}
 
 		// Print in KEY=VALUE format
 		for k, v := range envMap {
 			fmt.Printf("%s=%s\n", k, v)
 		}
+		return nil
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(envCmd)
+	RootCmd.AddCommand(envCmd)
 }
 
 func findNearestBoxConfig() (string, error) {

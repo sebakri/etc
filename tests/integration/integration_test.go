@@ -1,8 +1,10 @@
 //go:build integration
 
-package installer
+package integration_test
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,21 +12,61 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sebakri/box/cmd"
 	"github.com/sebakri/box/internal/config"
 )
+
+func setupTestProject(t *testing.T, configFile string) string {
+	t.Helper()
+	projectDir := t.TempDir()
+
+	t.Cleanup(func() {
+		_ = filepath.Walk(projectDir, func(path string, _ os.FileInfo, err error) error {
+			if err == nil {
+				//nolint:gosec
+				_ = os.Chmod(path, 0700)
+			}
+			return nil
+		})
+	})
+
+	//nolint:gosec
+	configSource, err := os.ReadFile(configFile)
+	if err != nil {
+		t.Fatalf("Failed to read integration test config: %v", err)
+	}
+
+	configPath := filepath.Join(projectDir, "box.yml")
+	if err := os.WriteFile(configPath, configSource, 0600); err != nil {
+		t.Fatalf("Failed to write box.yml: %v", err)
+	}
+
+	return projectDir
+}
+
+func isDigit(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
 
 func TestIntegrationInstallation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	boxBin := buildBoxBinary(t)
 	projectDir := setupTestProject(t, "testdata/integration_test.yml")
 
 	// Use a dedicated GOPATH for the test to avoid caching issues
 	t.Setenv("GOPATH", filepath.Join(t.TempDir(), "gopath"))
 
-	runBoxInstall(t, boxBin, projectDir)
+	runBoxCommand(t, projectDir, "install", "--non-interactive")
 	verifyInstallation(t, projectDir)
 }
 
@@ -32,8 +74,6 @@ func TestSandboxIsolation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
-
-	boxBin := buildBoxBinary(t)
 
 	// Create a temp parent directory to contain our project and witness file
 	tempParent := t.TempDir()
@@ -69,12 +109,32 @@ tools:
 		t.Skip("Skipping filesystem escape check on Linux - User Namespace isolation is identity-only for now.")
 	}
 
-	//nolint:gosec
-	installCmd := exec.Command(filepath.Clean(boxBin), "install", "--non-interactive")
-	installCmd.Dir = projectDir
-	output, err := installCmd.CombinedOutput()
+	// runBoxCommand calls RootCmd.Execute() which should return error or exit
+	// We need to capture the fact that it failed.
+	
+	// We don't use runBoxCommand here because we expect failure and want to check it
+	args := []string{"install", "--non-interactive"}
+	
+	oldCwd, _ := os.Getwd()
+	_ = os.Chdir(projectDir)
+	defer func() { _ = os.Chdir(oldCwd) }()
+
+	cmd.RootCmd.SetArgs(args)
+	// We need to suppress output or at least capture it to avoid messy logs
+	cmd.RootCmd.SetOut(new(bytes.Buffer))
+	cmd.RootCmd.SetErr(new(bytes.Buffer))
+	
+	err := cmd.RootCmd.Execute()
+	
+	// Reset RootCmd for other tests
+	t.Cleanup(func() {
+		cmd.RootCmd.SetOut(os.Stdout)
+		cmd.RootCmd.SetErr(os.Stderr)
+		cmd.RootCmd.SetArgs(nil)
+	})
+
 	if err == nil {
-		t.Fatalf("Expected box install to fail due to sandbox violation, but it succeeded.\nOutput: %s", string(output))
+		t.Fatalf("Expected box install to fail due to sandbox violation, but it succeeded.")
 	}
 
 	// Verify the witness file was NOT created
@@ -88,33 +148,32 @@ func TestCLICommands(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	boxBin := buildBoxBinary(t)
 	projectDir := setupTestProject(t, "testdata/integration_test.yml")
 
 	t.Run("version", func(t *testing.T) {
-		output := runBoxCommand(t, boxBin, projectDir, "version")
+		output := runBoxCommand(t, projectDir, "version")
 		if !strings.Contains(output, "box") {
 			t.Errorf("Expected version output to contain 'box', got: %s", output)
 		}
 	})
 
 	t.Run("install and list", func(t *testing.T) {
-		runBoxCommand(t, boxBin, projectDir, "install", "--non-interactive")
-		output := runBoxCommand(t, boxBin, projectDir, "list")
+		runBoxCommand(t, projectDir, "install", "--non-interactive")
+		output := runBoxCommand(t, projectDir, "list")
 		if !strings.Contains(output, "task") {
 			t.Errorf("Expected list output to contain 'task', got: %s", output)
 		}
 	})
 
 	t.Run("run", func(t *testing.T) {
-		output := runBoxCommand(t, boxBin, projectDir, "run", "task", "--version")
+		output := runBoxCommand(t, projectDir, "run", "task", "--version")
 		if !strings.Contains(output, "Task version") {
 			t.Errorf("Expected run output to contain 'Task version', got: %s", output)
 		}
 	})
 
 	t.Run("env", func(t *testing.T) {
-		output := runBoxCommand(t, boxBin, projectDir, "env")
+		output := runBoxCommand(t, projectDir, "env")
 		if !strings.Contains(output, "BOX_DIR") {
 			t.Errorf("Expected env output to contain 'BOX_DIR', got: %s", output)
 		}
@@ -123,14 +182,14 @@ func TestCLICommands(t *testing.T) {
 		}
 
 		// Test specific key
-		output = runBoxCommand(t, boxBin, projectDir, "env", "APP_DEBUG")
+		output = runBoxCommand(t, projectDir, "env", "APP_DEBUG")
 		if strings.TrimSpace(output) != "true" {
 			t.Errorf("Expected 'true', got: %q", output)
 		}
 	})
 
 	t.Run("generate direnv", func(t *testing.T) {
-		runBoxCommand(t, boxBin, projectDir, "generate", "direnv")
+		runBoxCommand(t, projectDir, "generate", "direnv")
 		envrcPath := filepath.Join(projectDir, ".envrc")
 		if _, err := os.Stat(envrcPath); err != nil {
 			t.Errorf("Expected .envrc to be generated, but not found: %v", err)
@@ -142,7 +201,7 @@ func TestCLICommands(t *testing.T) {
 	})
 
 	t.Run("generate dockerfile", func(t *testing.T) {
-		runBoxCommand(t, boxBin, projectDir, "generate", "dockerfile")
+		runBoxCommand(t, projectDir, "generate", "dockerfile")
 		dockerfilePath := filepath.Join(projectDir, "Dockerfile")
 		if _, err := os.Stat(dockerfilePath); err != nil {
 			t.Errorf("Expected Dockerfile to be generated, but not found: %v", err)
@@ -150,73 +209,49 @@ func TestCLICommands(t *testing.T) {
 	})
 
 	t.Run("doctor", func(t *testing.T) {
-		// doctor might return non-zero if some tools are missing on host, 
-		// but we just check if it runs.
-		cmd := exec.Command(boxBin, "doctor")
-		cmd.Dir = projectDir
-		_ = cmd.Run() 
+		runBoxCommand(t, projectDir, "doctor")
 	})
 }
 
-func runBoxCommand(t *testing.T, boxBin, projectDir string, args ...string) string {
+func runBoxCommand(t *testing.T, projectDir string, args ...string) string {
 	t.Helper()
-	//nolint:gosec
-	cmd := exec.Command(boxBin, args...)
-	cmd.Dir = projectDir
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("box %s failed: %v\nOutput: %s", strings.Join(args, " "), err, string(output))
+	
+	oldCwd, _ := os.Getwd()
+	if err := os.Chdir(projectDir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
 	}
-	return string(output)
-}
+	defer func() { _ = os.Chdir(oldCwd) }()
 
-func buildBoxBinary(t *testing.T) string {
-	t.Helper()
-	boxBin := filepath.Join(t.TempDir(), "box")
-	//nolint:gosec
-	buildCmd := exec.Command("go", "build", "-o", filepath.Clean(boxBin), "../../main.go")
-	if output, err := buildCmd.CombinedOutput(); err != nil {
-		t.Fatalf("Failed to build box binary: %v\nOutput: %s", err, string(output))
-	}
-	return boxBin
-}
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
-func setupTestProject(t *testing.T, configFile string) string {
-	t.Helper()
-	projectDir := t.TempDir()
+	cmd.RootCmd.SetArgs(args)
+	cmd.RootCmd.SetOut(w)
+	cmd.RootCmd.SetErr(w)
+
+	err := cmd.RootCmd.Execute()
+	
+	// Close writer and restore stdout
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	output := buf.String()
 
 	t.Cleanup(func() {
-		_ = filepath.Walk(projectDir, func(path string, _ os.FileInfo, err error) error {
-			if err == nil {
-				//nolint:gosec
-				_ = os.Chmod(path, 0700)
-			}
-			return nil
-		})
+		cmd.RootCmd.SetOut(os.Stdout)
+		cmd.RootCmd.SetErr(os.Stderr)
+		cmd.RootCmd.SetArgs(nil)
 	})
 
-	//nolint:gosec
-	configSource, err := os.ReadFile(configFile)
 	if err != nil {
-		t.Fatalf("Failed to read integration test config: %v", err)
+		t.Fatalf("box %s failed: %v\nOutput: %s", strings.Join(args, " "), err, output)
 	}
-
-	configPath := filepath.Join(projectDir, "box.yml")
-	if err := os.WriteFile(configPath, configSource, 0600); err != nil {
-		t.Fatalf("Failed to write box.yml: %v", err)
-	}
-
-	return projectDir
-}
-
-func runBoxInstall(t *testing.T, boxBin, projectDir string) {
-	t.Helper()
-	//nolint:gosec
-	installCmd := exec.Command(filepath.Clean(boxBin), "install", "--non-interactive")
-	installCmd.Dir = projectDir
-	if output, err := installCmd.CombinedOutput(); err != nil {
-		t.Fatalf("box install failed: %v\nOutput: %s", err, string(output))
-	}
+	
+	return output
 }
 
 func verifyInstallation(t *testing.T, projectDir string) {

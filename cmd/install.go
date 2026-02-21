@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -189,25 +188,25 @@ var (
 var installCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Installs tools defined in box.yml",
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if _, err := os.Stat(configFile); os.IsNotExist(err) {
-			log.Fatalf("Configuration file %s not found.", configFile)
+			return fmt.Errorf("configuration file %s not found", configFile)
 		}
 
 		cfg, err := config.Load(configFile)
 		if err != nil {
-			log.Fatalf("Failed to load %s: %v", configFile, err)
+			return fmt.Errorf("failed to load %s: %w", configFile, err)
 		}
 
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("Failed to get current working directory: %v", err)
+			return fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
 		// Create a specific temp directory for this session
 		tempDir, err := os.MkdirTemp("", "box-install-*")
 		if err != nil {
-			log.Fatalf("Failed to create temporary directory: %v", err)
+			return fmt.Errorf("failed to create temporary directory: %w", err)
 		}
 		defer func() {
 			_ = os.RemoveAll(tempDir)
@@ -220,13 +219,12 @@ var installCmd = &cobra.Command{
 			for _, tool := range cfg.Tools {
 				fmt.Printf("• Installing %s...\n", tool.DisplayName())
 				if err := mgr.Install(tool); err != nil {
-					fmt.Printf("❌ Failed to install %s: %v\n", tool.DisplayName(), err)
-					os.Exit(1)
+					return fmt.Errorf("failed to install %s: %w", tool.DisplayName(), err)
 				}
 				fmt.Printf("✅ Successfully installed %s\n", tool.DisplayName())
 			}
 			fmt.Println("All tools installed successfully! ✨")
-			return
+			return nil
 		}
 
 		mgr.Output = io.Discard
@@ -262,14 +260,14 @@ var installCmd = &cobra.Command{
 		}
 
 		if _, err := p.Run(); err != nil {
-			fmt.Println("Error running program:", err)
-			os.Exit(1)
+			return fmt.Errorf("error running program: %w", err)
 		}
+		return nil
 	},
 }
 
 func init() {
 	installCmd.Flags().BoolVarP(&nonInteractive, "non-interactive", "y", false, "Run in non-interactive mode (no TTY required)")
 	installCmd.Flags().StringVarP(&configFile, "file", "f", "box.yml", "Configuration file to use")
-	rootCmd.AddCommand(installCmd)
+	RootCmd.AddCommand(installCmd)
 }

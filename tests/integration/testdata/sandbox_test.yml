@@ -1,0 +1,6 @@
+tools:
+  - type: script
+    alias: run commands outside of the sandbox
+    source:
+      - touch ../sandbox_test_file.txt
+      - rm ../sandbox_test_file.txt

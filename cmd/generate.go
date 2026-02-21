@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -19,7 +18,7 @@ var generateCmd = &cobra.Command{
 	Long:      `Generates configuration files for shell integration or containerization (e.g., direnv, dockerfile).`,
 	ValidArgs: []string{"direnv", "dockerfile"},
 	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		genType := args[0]
 
 		configFile := "box.yml"
@@ -30,13 +29,13 @@ var generateCmd = &cobra.Command{
 
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("Failed to get current working directory: %v", err)
+			return fmt.Errorf("failed to get current working directory: %w", err)
 		}
 
 		// Create a specific temp directory for this session
 		tempDir, err := os.MkdirTemp("", "box-generate-*")
 		if err != nil {
-			log.Fatalf("Failed to create temporary directory: %v", err)
+			return fmt.Errorf("failed to create temporary directory: %w", err)
 		}
 		defer func() {
 			_ = os.RemoveAll(tempDir)
@@ -48,7 +47,7 @@ var generateCmd = &cobra.Command{
 		switch genType {
 		case "direnv":
 			if err := mgr.EnsureEnvrc(); err != nil {
-				log.Fatalf("Failed to generate .envrc: %v", err)
+				return fmt.Errorf("failed to generate .envrc: %w", err)
 			}
 			fmt.Printf("%s Generated .envrc\n", successStyle.Render("✅"))
 			if err := mgr.AllowDirenv(); err != nil {
@@ -56,13 +55,14 @@ var generateCmd = &cobra.Command{
 			}
 		case "dockerfile":
 			if err := mgr.GenerateDockerfile(); err != nil {
-				log.Fatalf("Failed to generate Dockerfile: %v", err)
+				return fmt.Errorf("failed to generate Dockerfile: %w", err)
 			}
 			fmt.Printf("%s Generated Dockerfile\n", successStyle.Render("✅"))
 		}
+		return nil
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(generateCmd)
+	RootCmd.AddCommand(generateCmd)
 }
