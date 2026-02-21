@@ -12,9 +12,14 @@ tasks:
       - GOOS=linux GOARCH=amd64 go build -o box main.go
 
   test:
-    desc: Run tests
+    desc: Run unit tests
     cmds:
-      - go test ./...
+      - go test -v ./...
+
+  test-integration:
+    desc: Run integration tests
+    cmds:
+      - go test -v -tags=integration ./...
 
   lint:
     desc: Run linters

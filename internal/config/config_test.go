@@ -115,3 +115,57 @@ func TestToolDisplayName(t *testing.T) {
 		})
 	}
 }
+
+func TestFindToolForBinary(t *testing.T) {
+	cfg := &Config{
+		Tools: []Tool{
+			{
+				Type:     "go",
+				Source:   Source{"github.com/go-task/task/v3/cmd/task"},
+				Binaries: []string{"task"},
+			},
+			{
+				Type:   "npm",
+				Source: Source{"cowsay"},
+			},
+		},
+	}
+
+	tests := []struct {
+		name       string
+		binaryName string
+		found      bool
+	}{
+		{"explicit binary", "task", true},
+		{"detected binary", "cowsay", true},
+		{"not found", "unknown", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cfg.FindToolForBinary(tt.binaryName)
+			if (got != nil) != tt.found {
+				t.Errorf("FindToolForBinary(%q) found = %v, want %v", tt.binaryName, got != nil, tt.found)
+			}
+		})
+	}
+}
+
+func TestIsSandboxEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		tool     Tool
+		expected bool
+	}{
+		{"script tool", Tool{Type: "script"}, true},
+		{"go tool", Tool{Type: "go"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.tool.IsSandboxEnabled(); got != tt.expected {
+				t.Errorf("IsSandboxEnabled() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
