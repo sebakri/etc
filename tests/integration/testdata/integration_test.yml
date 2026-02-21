@@ -2,5 +2,11 @@ tools:
   - type: go
     source: github.com/go-task/task/v3/cmd/task
     version: v3.40.0
+  - type: script
+    alias: golangci-lint
+    binaries:
+      - golangci-lint
+    source:
+      - curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $BOX_BIN_DIR v1.60.1
 env:
   APP_DEBUG: "true"
