@@ -21,6 +21,12 @@ tasks:
     cmds:
       - go test -v -tags=integration ./...
 
+  coverage:
+    desc: Show test coverage
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -func=coverage.out
+
   lint:
     desc: Run linters
     cmds:
