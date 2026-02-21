@@ -37,22 +37,41 @@ tasks:
       - go build -o box main.go
       - sudo mv box /usr/local/bin/box
 
-  tag:auto:
-    desc: "Create a new tag based on commits"
+  tag:internal:
+    internal: true
     cmds:
       - |
-        NEXT_TAG=$(svu next)
-        if [ "$NEXT_TAG" != "$(svu current)" ]; then
-          git tag $NEXT_TAG
-          echo "Created tag $NEXT_TAG"
+        if [ -z "{{.TAG}}" ]; then
+          echo "Error: TAG variable is required"
+          exit 1
+        fi
+        if git rev-parse "{{.TAG}}" >/dev/null 2>&1; then
+          echo "Tag {{.TAG}} already exists"
         else
-          echo "No version bump required"
+          git tag {{.TAG}}
+          echo "Created tag {{.TAG}}"
         fi
 
-  release:
-    desc: "Create a tag and push to trigger release"
+  release:auto:
+    desc: "Create a release automatically using svu"
+    vars:
+      NEXT_TAG:
+        sh: svu next
     cmds:
-      - task: tag
+      - |
+        if [ "{{.NEXT_TAG}}" == "$(svu current)" ]; then
+          echo "No version bump required"
+          exit 0
+        fi
+        task: tag:internal
+        vars: { TAG: "{{.NEXT_TAG}}" }
+      - git push origin main --tags
+
+  release:
+    desc: "Create a release manually (usage: task release TAG=v1.2.3)"
+    cmds:
+      - task: tag:internal
+        vars: { TAG: "{{.TAG}}" }
       - git push origin main --tags
 
   changelog:
