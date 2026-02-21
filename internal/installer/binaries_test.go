@@ -29,8 +29,7 @@ func TestBinariesField(t *testing.T) {
 		_ = os.RemoveAll(tmpDir)
 	}()
 
-	sandboxOff := false
-	m := New(tmpDir, nil, &config.Config{Sandbox: &sandboxOff})
+	m := New(tmpDir, nil, nil)
 
 	t.Run("Go with explicit binaries", func(t *testing.T) {
 		if _, err := exec.LookPath("go"); err != nil {

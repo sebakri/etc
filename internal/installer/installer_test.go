@@ -28,8 +28,7 @@ func TestInstallGoWithVersion(t *testing.T) {
 		_ = os.RemoveAll(tmpDir)
 	}()
 
-	sandboxOff := false
-	m := New(tmpDir, nil, &config.Config{Sandbox: &sandboxOff})
+	m := New(tmpDir, nil, nil)
 
 	// Test case 1: Go tool with version (with 'v' prefix)
 	tool := config.Tool{

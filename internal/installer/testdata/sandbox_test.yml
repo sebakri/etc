@@ -1,4 +1,3 @@
-sandbox: true
 tools:
   - type: script
     alias: run commands outside of the sandbox

@@ -40,16 +40,19 @@ func TestSandboxIsolation(t *testing.T) {
 	}
 
 	// File outside project directory that we will try to create/modify
-	witnessFile := filepath.Join(tempParent, "sandbox_witness.txt")
+	// We use /tmp directly because our sandbox profile specifically allows the project root and os.TempDir().
+	// On macOS, os.TempDir() is usually /var/folders/..., so /tmp is a good escape target.
+	witnessFile := "/tmp/box_sandbox_escape_witness.txt"
+	_ = os.Remove(witnessFile) // Ensure it doesn't exist
 
 	// Create a box.yml that attempts to write outside the project directory
+	// Sandboxing is enabled by default for scripts
 	boxYAML := `
-sandbox: true
 tools:
   - type: script
     alias: sandbox-escape-attempt
     source:
-      - touch ../sandbox_witness.txt
+      - touch /tmp/box_sandbox_escape_witness.txt
 `
 	if err := os.WriteFile(filepath.Join(projectDir, "box.yml"), []byte(boxYAML), 0600); err != nil {
 		t.Fatalf("Failed to write box.yml: %v", err)

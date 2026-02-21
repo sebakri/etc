@@ -42,22 +42,10 @@ func (s Source) String() string {
 	return strings.Join(s, "\n")
 }
 
-// IsGlobalSandboxEnabled returns true if global sandboxing is enabled.
-// It defaults to false.
-func (c Config) IsGlobalSandboxEnabled() bool {
-	if c.Sandbox != nil {
-		return *c.Sandbox
-	}
-	return false
-}
-
 // IsSandboxEnabled returns true if sandboxing should be used for this binary.
 func (c *Config) IsSandboxEnabled(binaryName string) bool {
-	if c.IsGlobalSandboxEnabled() {
-		return true
-	}
 	if t := c.FindToolForBinary(binaryName); t != nil {
-		return t.IsSandboxEnabled(c)
+		return t.IsSandboxEnabled()
 	}
 	return false
 }
@@ -70,20 +58,14 @@ type Tool struct {
 	Version  string   `yaml:"version,omitempty"`  // Optional version (e.g., "latest", "0.1.0")
 	Binaries []string `yaml:"binaries,omitempty"` // Optional explicit list of binaries
 	Args     []string `yaml:"args,omitempty"`
-	Sandbox  *bool    `yaml:"sandbox,omitempty"`  // Whether to run in a sandbox
 }
 
 // IsSandboxEnabled returns true if sandboxing is enabled for this tool.
-// It defaults to true for 'script' type, and false for others.
-func (t Tool) IsSandboxEnabled(globalConfig *Config) bool {
-	if t.Sandbox != nil {
-		return *t.Sandbox
-	}
-	if globalConfig != nil && globalConfig.Sandbox != nil {
-		return *globalConfig.Sandbox
-	}
+// It is always true for 'script' type, and false for others.
+func (t Tool) IsSandboxEnabled() bool {
 	return t.Type == "script"
 }
+
 
 // FindToolForBinary looks up which tool definition produces the given binary name.
 func (c *Config) FindToolForBinary(binaryName string) *Tool {
@@ -154,10 +136,10 @@ func (t Tool) DisplayName() string {
 
 // Config represents the top-level box configuration.
 type Config struct {
-	Tools   []Tool            `yaml:"tools"`
-	Env     map[string]string `yaml:"env,omitempty"`
-	Sandbox *bool             `yaml:"sandbox,omitempty"` // Global sandbox setting
+	Tools []Tool            `yaml:"tools"`
+	Env   map[string]string `yaml:"env,omitempty"`
 }
+
 
 
 

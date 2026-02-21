@@ -87,8 +87,8 @@ func (m *Manager) Install(tool config.Tool) error {
 		return fmt.Errorf("unsupported tool type: %s", tool.Type)
 	}
 
-	// Determine if sandbox is enabled for this specific tool
-	sandboxEnabled := tool.IsSandboxEnabled(m.GlobalConfig)
+	// Determine if sandbox is enabled for this tool (always true for scripts)
+	sandboxEnabled := tool.IsSandboxEnabled()
 
 	if err := installer.Install(tool, m, sandboxEnabled); err != nil {
 		return err
@@ -250,18 +250,14 @@ func (m *Manager) uninstallBestEffort(name string) error {
 }
 
 func (m *Manager) installGo(tool config.Tool, binDir string, sandbox bool) error {
-	m.log("Installing %s (go)...", tool.DisplayName())
-
-	err := m.runGoInstall(tool, binDir, sandbox)
-	if err != nil {
-		if tool.Version != "" && !strings.HasPrefix(tool.Version, "v") && len(tool.Version) > 0 && tool.Version[0] >= '0' && tool.Version[0] <= '9' {
-			m.log("Hint: Go tools often require a 'v' prefix for versions (e.g., v%s instead of %s)", tool.Version, tool.Version)
-		}
-		return err
+	if tool.Version != "" && !strings.HasPrefix(tool.Version, "v") && len(tool.Version) > 0 && tool.Version[0] >= '0' && tool.Version[0] <= '9' {
+		return fmt.Errorf("Go tools require a 'v' prefix for versions (e.g., v%s instead of %s)", tool.Version, tool.Version)
 	}
 
-	return nil
+	m.log("Installing %s (go)...", tool.DisplayName())
+	return m.runGoInstall(tool, binDir, sandbox)
 }
+
 
 func (m *Manager) runGoInstall(tool config.Tool, binDir string, sandbox bool) error {
 	source := tool.Source.String()

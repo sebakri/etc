@@ -1,4 +1,3 @@
-sandbox: false
 tools:
   - type: go
     source: github.com/go-task/task/v3/cmd/task
