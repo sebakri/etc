@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/sebakri/box/internal/config"
 )
@@ -26,9 +27,14 @@ type Manager struct {
 	installers map[string]Installer
 }
 
-// ToolManifest tracks files installed for a specific tool.
+// ToolManifest tracks metadata and files installed for a specific tool.
 type ToolManifest struct {
-	Files []string `json:"files"`
+	Type      string    `json:"type"`
+	Source    string    `json:"source"`
+	Version   string    `json:"version,omitempty"`
+	Files     []string  `json:"files"`
+	Installed time.Time `json:"installed"`
+	Updated   time.Time `json:"updated"`
 }
 
 // Manifest represents the persistent state of installed tools.
@@ -158,7 +164,11 @@ func (m *Manager) updateManifest(tool config.Tool, files []string) error {
 
 	name := tool.DisplayName()
 	existing, ok := manifest.Tools[name]
+
+	now := time.Now()
+	installed := now
 	if ok {
+		installed = existing.Installed
 		// Merge and deduplicate files
 		fileMap := make(map[string]bool)
 		for _, f := range existing.Files {
@@ -175,7 +185,14 @@ func (m *Manager) updateManifest(tool config.Tool, files []string) error {
 		files = newFileList
 	}
 
-	manifest.Tools[name] = ToolManifest{Files: files}
+	manifest.Tools[name] = ToolManifest{
+		Type:      tool.Type,
+		Source:    tool.Source.String(),
+		Version:   tool.Version,
+		Files:     files,
+		Installed: installed,
+		Updated:   now,
+	}
 
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
