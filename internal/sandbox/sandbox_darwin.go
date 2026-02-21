@@ -1,6 +1,6 @@
 //go:build darwin
 
-package installer
+package sandbox
 
 import (
 	"fmt"
@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 )
 
-func applySandbox(_ *exec.Cmd, name string, args []string, rootDir string, tempDir string) (string, []string) {
+// Apply configures the command to run within a sandbox on macOS using sandbox-exec.
+// It allows write access to the project root, the .box directory, and the specified tempDir.
+func Apply(cmd *exec.Cmd, name string, args []string, rootDir string, tempDir string) (string, []string) {
 	if tempDir == "" {
 		tempDir = os.TempDir()
 	}

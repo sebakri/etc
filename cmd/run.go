@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/sebakri/box/internal/config"
+	"github.com/sebakri/box/internal/sandbox"
 
 	"github.com/spf13/cobra"
 )
@@ -61,7 +62,7 @@ var runCmd = &cobra.Command{
 		tempCmd := exec.Command(binaryPath, commandArgs...)
 
 		if cfg.IsSandboxEnabled(commandName) {
-			finalCmdName, finalCmdArgs = applySandbox(tempCmd, binaryPath, commandArgs, cwd, tempDir)
+			finalCmdName, finalCmdArgs = sandbox.Apply(tempCmd, binaryPath, commandArgs, cwd, tempDir)
 		}
 
 		//nolint:gosec

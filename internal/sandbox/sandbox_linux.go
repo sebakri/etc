@@ -1,6 +1,6 @@
 //go:build linux
 
-package cmd
+package sandbox
 
 import (
 	"os"
@@ -8,7 +8,9 @@ import (
 	"syscall"
 )
 
-func applySandbox(cmd *exec.Cmd, name string, args []string, _ string, _ string) (string, []string) {
+// Apply configures the command to run within a sandbox on Linux using User Namespaces.
+// It maps the current user and group to root inside the namespace but disables setgroups.
+func Apply(cmd *exec.Cmd, name string, args []string, _ string, _ string) (string, []string) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS,
 		UidMappings: []syscall.SysProcIDMap{
