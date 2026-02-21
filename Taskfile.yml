@@ -57,5 +57,37 @@ tasks:
 
   changelog:
     desc: "Show changelog for the next release"
+    vars:
+      LAST_TAG:
+        sh: git describe --tags --abbrev=0 2>/dev/null || echo ""
     cmds:
-      - svu changelog
+      - |
+        if [ -z "{{.LAST_TAG}}" ]; then
+          echo "No previous tags found. Showing all commits:"
+          git log --oneline --no-merges
+        else
+          echo "Changelog since {{.LAST_TAG}}:"
+          echo ""
+          for type in feat fix refactor perf docs chore; do
+            LOGS=$(git log {{.LAST_TAG}}..HEAD --oneline --no-merges --grep="^$type")
+            if [ -n "$LOGS" ]; then
+              case $type in
+                feat) echo "### Features ✨" ;;
+                fix) echo "### Bug Fixes 🐛" ;;
+                refactor) echo "### Refactoring 🛠️" ;;
+                perf) echo "### Performance ⚡" ;;
+                docs) echo "### Documentation 📚" ;;
+                chore) echo "### Maintenance 🧹" ;;
+              esac
+              echo "$LOGS" | sed 's/^[a-f0-9]* /- /'
+              echo ""
+            fi
+          done
+          # Show others that don't match standard types
+          OTHERS=$(git log {{.LAST_TAG}}..HEAD --oneline --no-merges | grep -vE "^[a-f0-9]+ (feat|fix|refactor|perf|docs|chore)(\(.*\))?:")
+          if [ -n "$OTHERS" ]; then
+            echo "### Other Changes"
+            echo "$OTHERS" | sed 's/^[a-f0-9]* /- /'
+            echo ""
+          fi
+        fi
