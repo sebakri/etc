@@ -55,9 +55,6 @@ func New(rootDir string, tempDir string, env map[string]string, cfg *config.Conf
 	return m
 }
 
-
-
-
 // RegisterInstaller adds a new installer for a tool type.
 func (m *Manager) RegisterInstaller(toolType string, installer Installer) {
 	m.installers[toolType] = installer
@@ -144,13 +141,6 @@ func (m *Manager) updateManifest(name string, files []string) error {
 
 	if data, err := os.ReadFile(filepath.Clean(manifestPath)); err == nil {
 		_ = json.Unmarshal(data, &manifest)
-	} else {
-		// Try legacy manifest.bin if json doesn't exist
-		legacyPath := filepath.Join(m.RootDir, ".box", "manifest.bin")
-		if _, err := os.Stat(legacyPath); err == nil {
-			// If we found a legacy bin file, we just overwrite it with json in the next steps.
-			// In a real migration we might want to decode gob, but for now let's just use JSON.
-		}
 	}
 
 	manifest.Tools[name] = ToolManifest{Files: files}
@@ -254,15 +244,14 @@ func (m *Manager) uninstallBestEffort(name string) error {
 
 func (m *Manager) installGo(tool config.Tool, binDir string, sandbox bool) error {
 	if tool.Version != "" && !strings.HasPrefix(tool.Version, "v") && len(tool.Version) > 0 && tool.Version[0] >= '0' && tool.Version[0] <= '9' {
-		return fmt.Errorf("Go tools require a 'v' prefix for versions (e.g., v%s instead of %s)", tool.Version, tool.Version)
+		return fmt.Errorf("go tools require a 'v' prefix for versions (e.g., v%s instead of %s)", tool.Version, tool.Version)
 	}
 
 	m.log("Installing %s (go)...", tool.DisplayName())
 	return m.runGoInstall(tool, binDir, sandbox)
 }
 
-
-func (m *Manager) runGoInstall(tool config.Tool, binDir string, sandbox bool) error {
+func (m *Manager) runGoInstall(tool config.Tool, binDir string, _ bool) error {
 	source := tool.Source.String()
 	if tool.Version != "" {
 		source = fmt.Sprintf("%s@%s", source, tool.Version)
@@ -424,13 +413,11 @@ func shellEscape(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
 
-
 // AllowDirenv runs direnv allow in the project directory.
 func (m *Manager) AllowDirenv() error {
 	m.log("Running direnv allow...")
 	return m.runCommand("direnv", []string{"allow"}, nil, m.RootDir, false)
 }
-
 
 // GenerateDockerfile creates a Dockerfile for the project.
 // GenerateDockerfile creates a Dockerfile for the project.
@@ -494,7 +481,7 @@ CMD ["/bin/bash"]
 	return os.WriteFile(dockerfilePath, []byte(content), 0600)
 }
 
-func (m *Manager) installNpm(tool config.Tool, binDir string, sandbox bool) error {
+func (m *Manager) installNpm(tool config.Tool, binDir string, _ bool) error {
 	source := tool.Source.String()
 	if tool.Version != "" {
 		source = fmt.Sprintf("%s@%s", source, tool.Version)
@@ -518,7 +505,7 @@ func (m *Manager) installNpm(tool config.Tool, binDir string, sandbox bool) erro
 	return m.linkBinaries(npmBinDir, binDir, binaries)
 }
 
-func (m *Manager) installCargo(tool config.Tool, binDir string, sandbox bool) error {
+func (m *Manager) installCargo(tool config.Tool, binDir string, _ bool) error {
 	source := tool.Source.String()
 	if tool.Version != "" {
 		source = fmt.Sprintf("%s@%s", source, tool.Version)
@@ -546,7 +533,7 @@ func (m *Manager) installCargo(tool config.Tool, binDir string, sandbox bool) er
 	return m.linkBinaries(cargoBinDir, binDir, binaries)
 }
 
-func (m *Manager) installUv(tool config.Tool, binDir string, sandbox bool) error {
+func (m *Manager) installUv(tool config.Tool, binDir string, _ bool) error {
 	source := tool.Source.String()
 	if tool.Version != "" {
 		source = fmt.Sprintf("%s==%s", source, tool.Version)
@@ -579,7 +566,7 @@ func (m *Manager) installUv(tool config.Tool, binDir string, sandbox bool) error
 	return m.linkBinaries(uvBinDir, binDir, binaries)
 }
 
-func (m *Manager) installGem(tool config.Tool, binDir string, sandbox bool) error {
+func (m *Manager) installGem(tool config.Tool, binDir string, _ bool) error {
 	m.log("Installing %s %s (gem)...", tool.DisplayName(), tool.Version)
 
 	boxDir := filepath.Join(m.RootDir, ".box")

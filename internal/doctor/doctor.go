@@ -45,7 +45,6 @@ func Run() {
 		}
 	}
 
-
 	if !allFound {
 		fmt.Println(lipgloss.NewStyle().MarginTop(1).Render("Some tools are missing. Please install them to use their respective package managers."))
 	} else {

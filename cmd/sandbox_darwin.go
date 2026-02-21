@@ -1,4 +1,5 @@
 //go:build darwin
+
 package cmd
 
 import (
@@ -8,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-func applySandbox(cmd *exec.Cmd, name string, args []string, rootDir string, tempDir string) (string, []string) {
+func applySandbox(_ *exec.Cmd, name string, args []string, rootDir string, tempDir string) (string, []string) {
 	if tempDir == "" {
 		tempDir = os.TempDir()
 	}
@@ -35,11 +36,3 @@ func applySandbox(cmd *exec.Cmd, name string, args []string, rootDir string, tem
 
 	return "sandbox-exec", append([]string{"-p", profile, name}, args...)
 }
-
-
-
-
-
-
-
-

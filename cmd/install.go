@@ -159,7 +159,6 @@ func (m model) View() string {
 	return s + helpStyle.Render("Press q to quit") + "\n"
 }
 
-
 type progressWriter struct {
 	program *tea.Program
 	index   func() int

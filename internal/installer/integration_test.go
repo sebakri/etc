@@ -98,6 +98,7 @@ func setupTestProject(t *testing.T, configFile string) string {
 		})
 	})
 
+	//nolint:gosec
 	configSource, err := os.ReadFile(configFile)
 	if err != nil {
 		t.Fatalf("Failed to read integration test config: %v", err)

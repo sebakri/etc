@@ -22,6 +22,7 @@ func TestBinariesField(t *testing.T) {
 	defer func() {
 		_ = filepath.Walk(tmpDir, func(path string, _ os.FileInfo, err error) error {
 			if err == nil {
+				//nolint:gosec
 				_ = os.Chmod(path, 0700)
 			}
 			return nil
@@ -31,6 +32,13 @@ func TestBinariesField(t *testing.T) {
 
 	m := New(tmpDir, "", nil, nil)
 
+	testGoExplicit(t, m, tmpDir)
+	testScriptExplicit(t, m, tmpDir)
+	testNpmExplicit(t, m, tmpDir)
+	testScriptMissing(t, m)
+}
+
+func testGoExplicit(t *testing.T, m *Manager, tmpDir string) {
 	t.Run("Go with explicit binaries", func(t *testing.T) {
 		if _, err := exec.LookPath("go"); err != nil {
 			t.Skip("go not found in PATH")
@@ -55,7 +63,9 @@ func TestBinariesField(t *testing.T) {
 			t.Errorf("Expected binary at %s, but it does not exist: %v", binPath, err)
 		}
 	})
+}
 
+func testScriptExplicit(t *testing.T, m *Manager, tmpDir string) {
 	t.Run("Script with explicit binaries", func(t *testing.T) {
 		script := "echo 'hello' > $BOX_BIN_DIR/hello-world"
 		binName := "hello-world"
@@ -81,7 +91,9 @@ func TestBinariesField(t *testing.T) {
 			t.Errorf("Expected binary at %s, but it does not exist: %v", binPath, err)
 		}
 	})
+}
 
+func testNpmExplicit(t *testing.T, m *Manager, tmpDir string) {
 	t.Run("NPM with explicit binaries", func(t *testing.T) {
 		if _, err := exec.LookPath("npm"); err != nil {
 			t.Skip("npm not found in PATH")
@@ -105,7 +117,9 @@ func TestBinariesField(t *testing.T) {
 			t.Errorf("Expected binary at %s, but it does not exist: %v", binPath, err)
 		}
 	})
+}
 
+func testScriptMissing(t *testing.T, m *Manager) {
 	t.Run("Script with missing explicit binary should fail", func(t *testing.T) {
 		tool := config.Tool{
 			Type:     "script",

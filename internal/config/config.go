@@ -66,7 +66,6 @@ func (t Tool) IsSandboxEnabled() bool {
 	return t.Type == "script"
 }
 
-
 // FindToolForBinary looks up which tool definition produces the given binary name.
 func (c *Config) FindToolForBinary(binaryName string) *Tool {
 	for i := range c.Tools {
@@ -125,7 +124,6 @@ func isDigit(s string) bool {
 	return true
 }
 
-
 // DisplayName returns a human-readable name for the tool.
 func (t Tool) DisplayName() string {
 	if t.Alias != "" {
@@ -139,9 +137,6 @@ type Config struct {
 	Tools []Tool            `yaml:"tools"`
 	Env   map[string]string `yaml:"env,omitempty"`
 }
-
-
-
 
 // Load loads the configuration from the given path.
 func Load(path string) (*Config, error) {

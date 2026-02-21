@@ -37,12 +37,14 @@ func (m *Manager) runCommand(name string, args []string, env []string, dir strin
 	cmdArgs := args
 
 	// We create a dummy command just to pass to applySandbox which might modify its SysProcAttr
+	//nolint:gosec
 	tempCmd := exec.Command(name, args...)
 
 	if sandbox {
 		cmdName, cmdArgs = applySandbox(tempCmd, name, args, m.RootDir, m.TempDir)
 	}
 
+	//nolint:gosec
 	cmd := exec.Command(cmdName, cmdArgs...)
 	cmd.SysProcAttr = tempCmd.SysProcAttr // Transfer modified SysProcAttr
 	if dir != "" {
@@ -116,4 +118,3 @@ type ScriptInstaller struct{}
 func (i *ScriptInstaller) Install(tool config.Tool, m *Manager, sandbox bool) error {
 	return m.installScript(tool, sandbox)
 }
-
