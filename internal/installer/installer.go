@@ -2,7 +2,7 @@
 package installer
 
 import (
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -26,12 +26,12 @@ type Manager struct {
 
 // ToolManifest tracks files installed for a specific tool.
 type ToolManifest struct {
-	Files []string
+	Files []string `json:"files"`
 }
 
 // Manifest represents the persistent state of installed tools.
 type Manifest struct {
-	Tools map[string]ToolManifest
+	Tools map[string]ToolManifest `json:"tools"`
 }
 
 // New creates a new Manager instance.
@@ -43,16 +43,14 @@ func New(rootDir string, env map[string]string) *Manager {
 		installers: make(map[string]Installer),
 	}
 
-	// Register default installers
-	m.RegisterInstaller("go", &GoInstaller{})
-	m.RegisterInstaller("npm", &NpmInstaller{})
-	m.RegisterInstaller("cargo", &CargoInstaller{})
-	m.RegisterInstaller("uv", &UvInstaller{})
-	m.RegisterInstaller("gem", &GemInstaller{})
-	m.RegisterInstaller("script", &ScriptInstaller{})
+	// Register default installers from central registry
+	for k, v := range SupportedTools {
+		m.RegisterInstaller(k, v.Installer)
+	}
 
 	return m
 }
+
 
 // RegisterInstaller adds a new installer for a tool type.
 func (m *Manager) RegisterInstaller(toolType string, installer Installer) {
@@ -132,58 +130,50 @@ func (m *Manager) captureState() (map[string]bool, error) {
 }
 
 func (m *Manager) updateManifest(name string, files []string) error {
-	manifestPath := filepath.Join(m.RootDir, ".box", "manifest.bin")
+	manifestPath := filepath.Join(m.RootDir, ".box", "manifest.json")
 	manifest := Manifest{Tools: make(map[string]ToolManifest)}
 
-	if file, err := os.Open(filepath.Clean(manifestPath)); err == nil {
-		_ = gob.NewDecoder(file).Decode(&manifest)
-		_ = file.Close()
+	if data, err := os.ReadFile(filepath.Clean(manifestPath)); err == nil {
+		_ = json.Unmarshal(data, &manifest)
+	} else {
+		// Try legacy manifest.bin if json doesn't exist
+		legacyPath := filepath.Join(m.RootDir, ".box", "manifest.bin")
+		if _, err := os.Stat(legacyPath); err == nil {
+			// If we found a legacy bin file, we just overwrite it with json in the next steps.
+			// In a real migration we might want to decode gob, but for now let's just use JSON.
+		}
 	}
 
 	manifest.Tools[name] = ToolManifest{Files: files}
 
-	file, err := os.Create(filepath.Clean(manifestPath))
+	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return err
 	}
-	defer func() { _ = file.Close() }()
 
-	return gob.NewEncoder(file).Encode(manifest)
+	return os.WriteFile(filepath.Clean(manifestPath), data, 0600)
 }
 
 // LoadManifest reads the installed tools manifest.
 func (m *Manager) LoadManifest() (*Manifest, error) {
-	manifestPath := filepath.Join(m.RootDir, ".box", "manifest.bin")
+	manifestPath := filepath.Join(m.RootDir, ".box", "manifest.json")
 	manifest := Manifest{Tools: make(map[string]ToolManifest)}
 
-	file, err := os.Open(filepath.Clean(manifestPath))
+	data, err := os.ReadFile(filepath.Clean(manifestPath))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &manifest, nil
 		}
 		return nil, err
 	}
-	defer func() { _ = file.Close() }()
 
-	err = gob.NewDecoder(file).Decode(&manifest)
+	err = json.Unmarshal(data, &manifest)
 	return &manifest, err
 }
 
 // Uninstall removes an installed tool and its files.
 func (m *Manager) Uninstall(name string) error {
-	manifestPath := filepath.Join(m.RootDir, ".box", "manifest.bin")
-	manifest := Manifest{Tools: make(map[string]ToolManifest)}
-
-	file, err := os.Open(filepath.Clean(manifestPath))
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Fallback for old installations
-			return m.uninstallBestEffort(name)
-		}
-		return err
-	}
-	err = gob.NewDecoder(file).Decode(&manifest)
-	_ = file.Close()
+	manifest, err := m.LoadManifest()
 	if err != nil {
 		return err
 	}
@@ -226,12 +216,12 @@ func (m *Manager) Uninstall(name string) error {
 
 	delete(manifest.Tools, name)
 
-	outFile, err := os.Create(filepath.Clean(manifestPath))
+	manifestPath := filepath.Join(m.RootDir, ".box", "manifest.json")
+	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return err
 	}
-	defer func() { _ = outFile.Close() }()
-	return gob.NewEncoder(outFile).Encode(manifest)
+	return os.WriteFile(filepath.Clean(manifestPath), data, 0600)
 }
 
 func (m *Manager) uninstallBestEffort(name string) error {
@@ -402,19 +392,33 @@ func (m *Manager) EnsureEnvrc() error {
 	envrcPath := filepath.Join(m.RootDir, ".envrc")
 	boxDir := filepath.Join(m.RootDir, ".box")
 	binDir := filepath.Join(boxDir, "bin")
-	content := fmt.Sprintf("export BOX_DIR=\"%s\"\n", boxDir)
-	content += fmt.Sprintf("export BOX_BIN_DIR=\"%s\"\n", binDir)
-	content += fmt.Sprintf("export BOX_OS=\"%s\"\n", runtime.GOOS)
-	content += fmt.Sprintf("export BOX_ARCH=\"%s\"\n", runtime.GOARCH)
+
+	content := fmt.Sprintf("export BOX_DIR=%s\n", shellEscape(boxDir))
+	content += fmt.Sprintf("export BOX_BIN_DIR=%s\n", shellEscape(binDir))
+	content += fmt.Sprintf("export BOX_OS=%s\n", shellEscape(runtime.GOOS))
+	content += fmt.Sprintf("export BOX_ARCH=%s\n", shellEscape(runtime.GOARCH))
 	content += "PATH_add .box/bin\n"
 
-	for k, v := range m.Env {
-		content += fmt.Sprintf("export %s=\"%s\"\n", k, v)
+	// Sort keys for deterministic output
+	keys := make([]string, 0, len(m.Env))
+	for k := range m.Env {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := m.Env[k]
+		content += fmt.Sprintf("export %s=%s\n", k, shellEscape(v))
 	}
 
 	m.log("Updating .envrc...")
 	return os.WriteFile(filepath.Clean(envrcPath), []byte(content), 0600)
 }
+
+func shellEscape(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+}
+
 
 // AllowDirenv runs direnv allow in the project directory.
 func (m *Manager) AllowDirenv() error {

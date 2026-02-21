@@ -4,6 +4,9 @@ package doctor
 import (
 	"fmt"
 	"os/exec"
+	"sort"
+
+	"github.com/sebakri/box/internal/installer"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -19,10 +22,20 @@ var (
 func Run() {
 	fmt.Println(titleStyle.Render("Checking box host environment tools..."))
 
-	tools := []string{"go", "npm", "cargo-binstall", "uv", "gem", "direnv"}
 	allFound := true
 
-	for _, tool := range tools {
+	// Get tools from central registry
+	var toolNames []string
+	toolMap := make(map[string]string)
+	for _, t := range installer.SupportedTools {
+		toolNames = append(toolNames, t.Name)
+		toolMap[t.Name] = t.Name
+	}
+	// Add direnv specifically as it's an integration, not a tool type
+	toolNames = append(toolNames, "direnv")
+	sort.Strings(toolNames)
+
+	for _, tool := range toolNames {
 		path, err := exec.LookPath(tool)
 		if err != nil {
 			fmt.Printf("%s %-14s : Not found\n", errorStyle.Render("✗"), tool)
@@ -31,6 +44,7 @@ func Run() {
 			fmt.Printf("%s %-14s : %s\n", successStyle.Render("✓"), tool, dimStyle.Render(path))
 		}
 	}
+
 
 	if !allFound {
 		fmt.Println(lipgloss.NewStyle().MarginTop(1).Render("Some tools are missing. Please install them to use their respective package managers."))

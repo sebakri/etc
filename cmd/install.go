@@ -91,10 +91,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.tasks[msg.index].status = statusFailed
 			m.tasks[msg.index].err = msg.err
-			m.quitting = true
-			return m, tea.Quit
+		} else {
+			m.tasks[msg.index].status = statusDone
 		}
-		m.tasks[msg.index].status = statusDone
 		m.index++
 		if m.indexPtr != nil {
 			*m.indexPtr = m.index
@@ -123,6 +122,7 @@ func (m model) View() string {
 	statusStyle := lipgloss.NewStyle().Width(2).Align(lipgloss.Center)
 	outputStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241")).MarginLeft(6)
 
+	failedCount := 0
 	for i, t := range m.tasks {
 		status := " "
 		switch t.status {
@@ -132,6 +132,7 @@ func (m model) View() string {
 			status = checkMark.String()
 		case statusFailed:
 			status = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render("✗")
+			failedCount++
 		}
 
 		s += fmt.Sprintf("  %s %s\n", statusStyle.Render(status), t.name)
@@ -149,11 +150,15 @@ func (m model) View() string {
 	}
 
 	if m.index >= len(m.tasks) {
+		if failedCount > 0 {
+			return s + lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Margin(1, 2).Render(fmt.Sprintf("Installation finished with %d errors.", failedCount)) + "\n"
+		}
 		return s + doneStyle.Render("All tools installed successfully! ✨") + "\n"
 	}
 
 	return s + helpStyle.Render("Press q to quit") + "\n"
 }
+
 
 type progressWriter struct {
 	program *tea.Program

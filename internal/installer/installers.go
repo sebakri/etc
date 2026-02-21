@@ -15,6 +15,22 @@ type Installer interface {
 	Install(tool config.Tool, m *Manager) error
 }
 
+// ToolType represents a supported tool runtime.
+type ToolType struct {
+	Name      string
+	Installer Installer
+}
+
+// SupportedTools is the central registry of all tool types box can handle.
+var SupportedTools = map[string]ToolType{
+	"go":     {Name: "go", Installer: &GoInstaller{}},
+	"npm":    {Name: "npm", Installer: &NpmInstaller{}},
+	"cargo":  {Name: "cargo-binstall", Installer: &CargoInstaller{}},
+	"uv":     {Name: "uv", Installer: &UvInstaller{}},
+	"gem":    {Name: "gem", Installer: &GemInstaller{}},
+	"script": {Name: "sh", Installer: &ScriptInstaller{}},
+}
+
 // runCommand is a helper to run shell commands with consistent output redirection and environment setup.
 func (m *Manager) runCommand(name string, args []string, env []string, dir string) error {
 	cmd := exec.Command(name, args...)
