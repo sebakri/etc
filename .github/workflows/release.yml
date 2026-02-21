@@ -2,8 +2,6 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
 
@@ -11,42 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  tag:
-    name: Calculate Tag
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    outputs:
-      tag: ${{ steps.version.outputs.tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install svu
-        run: go install github.com/caarlos0/svu@latest
-
-      - name: Calculate next version
-        id: version
-        run: |
-          NEXT_TAG=$(svu next)
-          if [ "$NEXT_TAG" != "$(svu current)" ]; then
-            echo "tag=$NEXT_TAG" >> $GITHUB_OUTPUT
-            echo "New version detected: $NEXT_TAG"
-          else
-            echo "No new version detected."
-          fi
-
   build:
     name: Build
-    needs: tag
-    # Run if we have a new tag from the 'tag' job OR if this was triggered by a manual tag push
-    if: always() && (needs.tag.outputs.tag != '' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -75,18 +39,9 @@ jobs:
         with:
           go-version: "1.24"
 
-      - name: Determine Version
-        id: vars
-        run: |
-          if [ "${{ needs.tag.outputs.tag }}" != "" ]; then
-            echo "version=${{ needs.tag.outputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Build
         run: |
-          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w -X box/cmd.Version=${{ steps.vars.outputs.version }}" -o box-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.suffix }} main.go
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w -X github.com/sebakri/box/cmd.Version=${{ github.ref_name }}" -o box-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.suffix }} main.go
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -96,8 +51,6 @@ jobs:
 
   test:
     name: Test
-    needs: tag
-    if: always() && (needs.tag.outputs.tag != '' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -116,8 +69,6 @@ jobs:
 
   lint:
     name: Lint
-    needs: tag
-    if: always() && (needs.tag.outputs.tag != '' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -135,69 +86,11 @@ jobs:
 
   release:
     name: Create Release
-    needs: [tag, build, test, lint]
+    needs: [build, test, lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Install svu
-        run: go install github.com/caarlos0/svu@latest
-
-      - name: Determine Version
-        id: vars
-        run: |
-          if [ "${{ needs.tag.outputs.tag }}" != "" ]; then
-            echo "version=${{ needs.tag.outputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Validate Tag
-        if: github.ref_type == 'tag'
-        run: |
-          TAG=${{ github.ref_name }}
-
-          # Get expected versions based on the state BEFORE the tag was pushed
-          # We use HEAD^ because the current commit IS the tag.
-          git checkout HEAD^
-          CURRENT=$(svu current)
-          NEXT=$(svu next)
-          git checkout $TAG
-
-          echo "Validating manual tag release:"
-          echo "  Pushed Tag:      $TAG"
-          echo "  Current Version: $CURRENT"
-          echo "  Next Expected:   $NEXT"
-
-          # Check if TAG > CURRENT
-          if [ "$TAG" == "$CURRENT" ] || [ "$(echo -e "$TAG\n$CURRENT" | sort -V | head -n1)" == "$TAG" ]; then
-            echo "Error: Pushed tag $TAG must be greater than current version $CURRENT"
-            exit 1
-          fi
-
-          # Check if TAG >= NEXT
-          if [ "$(echo -e "$TAG\n$NEXT" | sort -V | head -n1)" != "$NEXT" ] && [ "$TAG" != "$NEXT" ]; then
-            echo "Error: Pushed tag $TAG must be greater than or equal to next expected version $NEXT"
-            exit 1
-          fi
-
-          echo "Tag validation successful. Proceeding with release."
-
-      - name: Push Tag
-        if: needs.tag.outputs.tag != ''
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.vars.outputs.version }}" -m "Release ${{ steps.vars.outputs.version }}"
-          git push origin "${{ steps.vars.outputs.version }}"
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -210,8 +103,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete ${{ steps.vars.outputs.version }} --yes || true
-          gh release create ${{ steps.vars.outputs.version }} \
-            --title "${{ steps.vars.outputs.version }}" \
+          gh release create ${{ github.ref_name }} \
+            --title "${{ github.ref_name }}" \
             --generate-notes \
             ./artifacts/box-*
