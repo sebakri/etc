@@ -53,9 +53,10 @@ tasks:
         fi
 
   release:
-    desc: "Create a release. Defaults to svu versioning if TAG is not provided (usage: task release [TAG=v1.2.3])"
+    desc: "Create a release. BUMP can be 'next' (default), 'patch', 'minor', or 'major' (usage: task release [BUMP=minor])"
     vars:
-      FINAL_TAG: '{{default (sh "svu next") .TAG}}'
+      FINAL_TAG:
+        sh: svu {{default "next" .BUMP}}
     cmds:
       - |
         if [ "{{.FINAL_TAG}}" == "$(svu current)" ]; then
@@ -65,6 +66,24 @@ tasks:
         task: tag:internal
         vars: { TAG: "{{.FINAL_TAG}}" }
       - git push origin main --tags
+
+  "release:patch":
+    desc: "Create a patch release"
+    cmds:
+      - task: release
+        vars: { BUMP: patch }
+
+  "release:minor":
+    desc: "Create a minor release"
+    cmds:
+      - task: release
+        vars: { BUMP: minor }
+
+  "release:major":
+    desc: "Create a major release"
+    cmds:
+      - task: release
+        vars: { BUMP: major }
 
   changelog:
     desc: "Show changelog for the next release"
