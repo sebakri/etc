@@ -86,19 +86,34 @@ tools:
     source: cowsay
 ```
 
-### 3. Install Tools
+## Configuration Reference (`box.yml`)
 
-Run the install command to fetch and install all defined tools. Custom scripts have access to several environment variables:
+The `box.yml` file supports the following fields for each tool:
+
+- `type`: The installer to use (`go`, `npm`, `cargo`, `uv`, `gem`, `script`).
+- `source`: The package name, URL, or script commands.
+- `version`: (Optional) The version to install.
+- `alias`: (Optional) A human-readable name for the tool.
+- `args`: (Optional) Additional arguments passed to the underlying installer.
+- `binaries`: (Optional) Explicit list of binary names to link into `.box/bin`. Useful for Go tools that install multiple binaries or if the default name detection fails.
+
+### The `script` Installer
+
+The `script` type allows you to install tools that don't have a supported package manager. It is **not** for general-purpose hooks, but for running custom installation logic.
+
+Scripts have access to several environment variables:
 
 - `BOX_DIR`: The path to the `.box` directory.
 - `BOX_BIN_DIR`: The path to the `.box/bin` directory.
 - `BOX_OS`: The current operating system (`runtime.GOOS`).
 - `BOX_ARCH`: The current architecture (`runtime.GOARCH`).
 
-`.box/bin` is also added to their `PATH`.
+### 3. Install Tools
+
+Run the install command to fetch and install all defined tools.
 
 ```bash
-box install
+box install [-y] [-f file]
 ```
 
 ### 4. Setup Shell Integration (Optional)
@@ -135,13 +150,14 @@ task --version
 
 ## Commands
 
-- `box install`: Installs tools defined in `box.yml`.
+- `box install [-y] [-f file]`: Installs tools defined in `box.yml` (or specified file). Use `-y` or `--non-interactive` for CI environments.
 - `box list`: Lists installed tools and their binaries.
-- `box run <command>`: Executes a binary from the local `.box/bin` directory.
-- `box env`: Displays the merged list of environment variables.
+- `box run <command> [args...]`: Executes a binary from the local `.box/bin` directory.
+- `box env [key]`: Displays the merged list of environment variables. If `key` is provided, only its value is printed (useful for shell substitution like `$(box env BOX_DIR)`).
 - `box generate direnv`: Generates a `.envrc` file for `direnv` integration.
 - `box generate dockerfile`: Generates a `Dockerfile` for containerized development.
-- `box doctor`: Checks if the required host runtimes (Go, npm, Cargo, uv) are installed.
+- `box doctor`: Checks if the required host runtimes (Go, npm, Cargo, uv, gem) are installed.
+- `box version`: Prints the current version of box.
 - `box help`: Displays usage information.
 
 ## Contributing

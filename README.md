@@ -24,12 +24,19 @@ Full documentation is available at [https://sebakri.github.io/box/](https://seba
     ```yaml
     tools:
       - type: go
-        source: github.com/go-task/task/v3/cmd/task@latest
+        source: github.com/go-task/task/v3/cmd/task
+        version: latest
+        binaries:
+          - task
       - type: cargo
         source: jj-cli
         args:
           - --strategies
           - crate-meta-data
+      - type: script
+        alias: golangci-lint
+        source:
+          - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $BOX_BIN_DIR v1.60.1
     env:
       APP_DEBUG: "true"
     ```
@@ -40,10 +47,11 @@ Full documentation is available at [https://sebakri.github.io/box/](https://seba
 ## Features
 
 - **Project-Local Tools**: Installs tools into a local `.box/bin` directory.
-- **Environment Variables**: Define project-specific environment variables in `box.yml`. `BOX_DIR` and `BOX_BIN_DIR` are automatically provided.
+- **Environment Variables**: Define project-specific environment variables in `box.yml`. `BOX_DIR`, `BOX_BIN_DIR`, `BOX_OS`, and `BOX_ARCH` are automatically provided.
 - **No Root Required**: Leverages user-space package managers (Go, npm, Cargo, uv, gem) or custom shell scripts.
 - **Declarative Configuration**: Defined in `box.yml`.
 - **Manual or Automatic PATH**: Use `box run` or generate a `.envrc` for `direnv`.
+- **Docker Integration**: Generate a pre-configured `Dockerfile` with all your tools.
 
 ## Installation
 
@@ -57,12 +65,14 @@ Or download the binary for your platform from the [latest releases](https://gith
 
 ## Commands
 
-- `box install`: Installs tools defined in `box.yml`.
+- `box install [-y] [-f file]`: Installs tools defined in `box.yml` (or specified file). Use `-y` for non-interactive mode.
 - `box list`: Lists installed tools and their binaries.
-- `box run <command>`: Executes a binary from the local `.box/bin` directory.
-- `box env`: Displays the merged list of environment variables.
+- `box run <command> [args...]`: Executes a binary from the local `.box/bin` directory.
+- `box env [key]`: Displays the merged list of environment variables, or just the value of `key`.
 - `box generate direnv`: Generates a `.envrc` file for `direnv` integration.
-- `box doctor`: Checks if the host runtimes are installed.
+- `box generate dockerfile`: Generates a `Dockerfile` for containerized development.
+- `box doctor`: Checks if the host runtimes (Go, npm, Cargo, uv, gem) are installed.
+- `box version`: Prints the current version of box.
 
 ## Development
 
