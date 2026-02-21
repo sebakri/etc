@@ -24,7 +24,23 @@ tasks:
   coverage:
     desc: Show test coverage summary
     cmds:
-      - go test -v -tags=integration -cover ./... | grep coverage
+      - |
+        echo "Test Coverage Report"
+        echo "===================="
+        printf "%-40s | %-10s\n" "Package" "Coverage"
+        echo "-----------------------------------------|-----------"
+        go test -tags=integration -cover ./... | grep "coverage:" | while read -r line; do
+          pkg=$(echo "$line" | awk '{for(i=1;i<=NF;i++) if($i ~ /github.com\/sebakri\/box/) print $i}')
+          cov=$(echo "$line" | awk '{for(i=1;i<=NF;i++) if($i ~ /[0-9]+\.[0-9]%/) print $i}')
+          pkg_short=$(echo "$pkg" | sed 's|github.com/sebakri/box/||' | sed 's|github.com/sebakri/box|.|')
+          if [ -n "$pkg_short" ] && [ -n "$cov" ]; then
+            printf "%-40s | %-10s\n" "$pkg_short" "$cov"
+          fi
+        done
+        echo "-----------------------------------------|-----------"
+        go test -tags=integration -coverprofile=coverage.out ./... > /dev/null
+        TOTAL=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}')
+        printf "%-40s | %-10s\n" "TOTAL" "$TOTAL"
 
   lint:
     desc: Run linters
