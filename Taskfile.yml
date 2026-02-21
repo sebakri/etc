@@ -22,10 +22,9 @@ tasks:
       - go test -v -tags=integration ./...
 
   coverage:
-    desc: Show test coverage
+    desc: Show test coverage summary
     cmds:
-      - go test -coverprofile=coverage.out ./...
-      - go tool cover -func=coverage.out
+      - go test -v -tags=integration -cover ./... | grep coverage
 
   lint:
     desc: Run linters
