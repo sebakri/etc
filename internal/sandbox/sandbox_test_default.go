@@ -7,4 +7,4 @@ import (
 	"testing"
 )
 
-func checkLinuxSysProcAttr(t *testing.T, cmd *exec.Cmd) {}
+func checkLinuxSysProcAttr(_ *testing.T, _ *exec.Cmd) {}

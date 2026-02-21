@@ -1,5 +1,6 @@
 //go:build !linux && !darwin
 
+// Package sandbox provides platform-specific mechanisms for isolating tool execution.
 package sandbox
 
 import (
@@ -7,6 +8,6 @@ import (
 )
 
 // Apply is a no-op on unsupported platforms.
-func Apply(cmd *exec.Cmd, name string, args []string, _ string, _ string) (string, []string) {
+func Apply(_ *exec.Cmd, name string, args []string, _ string, _ string) (string, []string) {
 	return name, args
 }

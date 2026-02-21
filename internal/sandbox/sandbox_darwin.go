@@ -1,5 +1,6 @@
 //go:build darwin
 
+// Package sandbox provides platform-specific mechanisms for isolating tool execution.
 package sandbox
 
 import (
@@ -11,7 +12,7 @@ import (
 
 // Apply configures the command to run within a sandbox on macOS using sandbox-exec.
 // It allows write access to the project root, the .box directory, and the specified tempDir.
-func Apply(cmd *exec.Cmd, name string, args []string, rootDir string, tempDir string) (string, []string) {
+func Apply(_ *exec.Cmd, name string, args []string, rootDir string, tempDir string) (string, []string) {
 	if tempDir == "" {
 		tempDir = os.TempDir()
 	}

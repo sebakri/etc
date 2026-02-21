@@ -1,5 +1,6 @@
 //go:build linux
 
+// Package sandbox provides platform-specific mechanisms for isolating tool execution.
 package sandbox
 
 import (
