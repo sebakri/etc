@@ -37,7 +37,7 @@ tasks:
       - go build -o box main.go
       - sudo mv box /usr/local/bin/box
 
-  tag:
+  tag:auto:
     desc: "Create a new tag based on commits"
     cmds:
       - |
@@ -54,3 +54,8 @@ tasks:
     cmds:
       - task: tag
       - git push origin main --tags
+
+  changelog:
+    desc: "Show changelog for the next release"
+    cmds:
+      - svu changelog
