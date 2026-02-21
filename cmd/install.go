@@ -205,7 +205,16 @@ var installCmd = &cobra.Command{
 			log.Fatalf("Failed to get current working directory: %v", err)
 		}
 
-		mgr := installer.New(cwd, cfg.Env, cfg)
+		// Create a specific temp directory for this session
+		tempDir, err := os.MkdirTemp("", "box-install-*")
+		if err != nil {
+			log.Fatalf("Failed to create temporary directory: %v", err)
+		}
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
+
+		mgr := installer.New(cwd, tempDir, cfg.Env, cfg)
 
 		if nonInteractive {
 			fmt.Println("Starting tool installation (non-interactive)...")

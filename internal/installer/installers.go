@@ -40,7 +40,7 @@ func (m *Manager) runCommand(name string, args []string, env []string, dir strin
 	tempCmd := exec.Command(name, args...)
 
 	if sandbox {
-		cmdName, cmdArgs = applySandbox(tempCmd, name, args, m.RootDir)
+		cmdName, cmdArgs = applySandbox(tempCmd, name, args, m.RootDir, m.TempDir)
 	}
 
 	cmd := exec.Command(cmdName, cmdArgs...)

@@ -17,6 +17,7 @@ import (
 // Manager handles tool installations and environment setup.
 type Manager struct {
 	RootDir      string
+	TempDir      string
 	Env          map[string]string
 	Output       io.Writer
 	GlobalConfig *config.Config
@@ -36,9 +37,10 @@ type Manifest struct {
 }
 
 // New creates a new Manager instance.
-func New(rootDir string, env map[string]string, cfg *config.Config) *Manager {
+func New(rootDir string, tempDir string, env map[string]string, cfg *config.Config) *Manager {
 	m := &Manager{
 		RootDir:      rootDir,
+		TempDir:      tempDir,
 		Env:          env,
 		Output:       os.Stdout,
 		GlobalConfig: cfg,
@@ -52,6 +54,7 @@ func New(rootDir string, env map[string]string, cfg *config.Config) *Manager {
 
 	return m
 }
+
 
 
 
@@ -615,6 +618,12 @@ func (m *Manager) installScript(tool config.Tool, sandbox bool) error {
 	env = append(env, fmt.Sprintf("BOX_OS=%s", runtime.GOOS))
 	env = append(env, fmt.Sprintf("BOX_ARCH=%s", runtime.GOARCH))
 	env = append(env, fmt.Sprintf("PATH=%s%s%s", binDir, string(os.PathListSeparator), os.Getenv("PATH")))
+
+	if m.TempDir != "" {
+		env = append(env, fmt.Sprintf("TMPDIR=%s", m.TempDir))
+		env = append(env, fmt.Sprintf("TEMP=%s", m.TempDir))
+		env = append(env, fmt.Sprintf("TMP=%s", m.TempDir))
+	}
 
 	// Add project custom env vars
 	for k, v := range m.Env {

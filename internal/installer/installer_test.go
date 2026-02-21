@@ -28,7 +28,7 @@ func TestInstallGoWithVersion(t *testing.T) {
 		_ = os.RemoveAll(tmpDir)
 	}()
 
-	m := New(tmpDir, nil, nil)
+	m := New(tmpDir, "", nil, nil)
 
 	// Test case 1: Go tool with version (with 'v' prefix)
 	tool := config.Tool{

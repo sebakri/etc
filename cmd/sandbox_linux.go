@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-func applySandbox(cmd *exec.Cmd, name string, args []string, _ string) (string, []string) {
+func applySandbox(cmd *exec.Cmd, name string, args []string, _ string, _ string) (string, []string) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS,
 		UidMappings: []syscall.UidMap{
